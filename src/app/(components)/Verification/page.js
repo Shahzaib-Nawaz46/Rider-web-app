@@ -1,16 +1,44 @@
 "use client";
-import { useState } from "react";
+import React from "react";
+import { useState,useEffect } from "react";
+import axios from 'axios';
+
+
 
 const countries = [
-  { code: "PK", dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
-  { code: "IN", dial: "+91", flag: "https://flagsapi.com/IN/flat/64.png" },
-  { code: "BD", dial: "+880", flag: "https://flagsapi.com/BD/flat/64.png" },
+  { callingCodes: ["pk"] , dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
+ 
 ];
 
 export default function Verification() {
-  const [selected, setSelected] = useState(countries[0]);
-  const [open, setOpen] = useState(false);
 
+
+  const [selected, setSelected] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [datas,setData] = useState([])
+     
+  useEffect(() => {
+    const fetchdata = async() =>{
+      try{
+        
+        const res = await fetch("/api/countries");
+        const data = await res.json()
+        setData(data)
+        setSelected(data[169])
+      } catch(err){
+        console.log(err)
+      }
+    }
+    fetchdata()
+   
+  }, [])
+    
+  useEffect(() => {
+    console.log(selected)
+   
+  }, [selected])
+  
+  
   return (
     <div className="flex flex-col items-center h-screen pt-32 px-4">
 
@@ -23,7 +51,7 @@ export default function Verification() {
         {/* Flag selector */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setOpen(!open)}>
           <img src={selected.flag} className="w-6 h-6 rounded-full" />
-          <span>{selected.dial}</span>
+          <span>{selected.callingCodes}</span>
         </div>
 
         {/* Phone input */}
@@ -35,10 +63,10 @@ export default function Verification() {
 
         {/* Dropdown */}
         {open && (
-          <div className="absolute top-14 left-3 bg-white border shadow-md rounded-lg w-40 z-50">
-            {countries.map((c) => (
+          <div className="absolute top-14 left-3 bg-white border shadow-md rounded-lg w-40 z-50 h-80 overflow-auto">
+            {datas.map((c,i) => (
               <div
-                key={c.code}
+                key={i}
                 className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer"
                 onClick={() => {
                   setSelected(c);
@@ -46,7 +74,7 @@ export default function Verification() {
                 }}
               >
                 <img src={c.flag} className="w-6 h-6 rounded-full" />
-                <span>{c.dial}</span>
+                <span>{c.name}</span>
               </div>
             ))}
           </div>

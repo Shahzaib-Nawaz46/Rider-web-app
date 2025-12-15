@@ -9,7 +9,7 @@ const Select = () => {
     <div className="h-screen w-screen flex justify-center items-center">
       
       {/* Driver */}
-      <Link href="/User">
+      <Link href="/Verification">
       <div className="flex flex-col items-center gap-2 cursor-pointer">
         <div className="bg-[#66CC33] p-8 rounded-lg flex justify-center items-center w-24 h-24">
           <FaUser size={40} />
@@ -23,7 +23,7 @@ const Select = () => {
       <div className="w-8" />
 
       {/* User */}
-      <Link href="/Driver">
+      <Link href="/Verification">
       <div className="flex flex-col items-center gap-2 cursor-pointer">
         <div className="bg-[#66CC33] p-8 rounded-lg flex justify-center items-center w-24 h-24">
           <FaCar size={40} />
