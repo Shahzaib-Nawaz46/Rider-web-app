@@ -6,7 +6,7 @@ import axios from 'axios';
 
 
 const countries = [
-  { callingCodes: ["pk"] , dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
+  { callingCodes: ["+92"] , dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
  
 ];
 
@@ -18,13 +18,19 @@ export default function Verification() {
   const [datas,setData] = useState([])
      
   useEffect(() => {
+    console.log(selected)
+    setSelected(countries[0])
+   
+  }, [])
+
+
+  useEffect(() => {
     const fetchdata = async() =>{
       try{
         
         const res = await fetch("/api/countries");
         const data = await res.json()
         setData(data)
-        setSelected(data[169])
       } catch(err){
         console.log(err)
       }
@@ -33,10 +39,7 @@ export default function Verification() {
    
   }, [])
     
-  useEffect(() => {
-    console.log(selected)
-   
-  }, [selected])
+  
   
   
   return (
@@ -56,10 +59,12 @@ export default function Verification() {
 
         {/* Phone input */}
         <input
-          type="text"
+          type="number"
           placeholder="000000000"
           className="outline-none flex-1"
         />
+
+        {/* <input type="text" /> */}
 
         {/* Dropdown */}
         {open && (
@@ -80,7 +85,7 @@ export default function Verification() {
           </div>
         )}
       </div>
-
+     
       <button className="bg-black text-white py-3 mt-5 w-full max-w-sm rounded-xl">
         Continue With Phone
       </button>
