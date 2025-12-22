@@ -3,4 +3,6 @@
 
 
 @import "tailwindcss";
-
+body {
+  margin: 0;
+}
