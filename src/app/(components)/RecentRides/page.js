@@ -22,7 +22,7 @@ const rides = [
 const RecentRides = () => {
   return (
     <div className="mx-4 mt-50 mb-30 text-white">
-      <h3 className="text-base font-semibold text-[#D1D1D1] mb-3">
+      <h3 className="text-base font-semibold text-black font-semibold text-xl mb-3">
         Recent Rides
       </h3>
 

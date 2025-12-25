@@ -14,9 +14,22 @@ export default () => {
       <Swiper
         spaceBetween={5}
         slidesPerView={1.5}
-        onSlideChange={() => console.log('slide change')}
-        onSwiper={(swiper) => console.log(swiper)}
-      >
+        breakpoints={{
+    640: {   // tablets
+      slidesPerView: 2,
+      spaceBetween: 10,
+    },
+    1024: {  // laptops & desktops
+      slidesPerView: 3,
+      spaceBetween: 12,   // gap kam on big screen
+    },
+    1280: {  // large screens
+      slidesPerView: 3,
+      spaceBetween: 16,
+    },
+  }}
+>
+      
         <SwiperSlide className='mx-4 '>
           <div className='w-50 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md '>
             <div>

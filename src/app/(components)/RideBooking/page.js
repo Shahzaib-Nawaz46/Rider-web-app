@@ -36,18 +36,24 @@ const page = () => {
 
                     </div>
                     {/* search bar */}
-                    <div className="flex h-15 items-center p-2 justify-between bg-white rounded-lg mx-4">
+                    <div className="flex items-center p-2 justify-between bg-white rounded-lg mx-2 md:mx-20 lg:mx-40">
                         <CiSearch size={25} className="font-bold" />
-                        <div className=" mx-1 w-45">
-                            <input type="text" placeholder="Where are you going" className="outline-none font-semibold" />
 
+                        <div className="flex-1 mx-2">
+                            <input
+                                type="text"
+                                placeholder="Where are you going"
+                                className="w-full outline-none font-semibold"
+                            />
                         </div>
-                        <div className="flex  rounded-lg p-2 px-3  items-center bg-[#95CB33] gap-1">
+
+                        <div className="flex rounded-lg p-2 px-3 items-center bg-[#95CB33] gap-1">
                             <RxStopwatch size={18} />
-                            <span className="font-semibold"> Later</span>
+                            <span className="font-semibold">Later</span>
                             <FaChevronDown size={15} />
                         </div>
                     </div>
+
 
                     {/* saved address */}
                     <div className="text-white m-4">
@@ -80,15 +86,15 @@ const page = () => {
                 <div className=" bg-[#1A1A1A]">
                     <div className="h-10">
 
-                <Vehicles />
+                        <Vehicles />
                     </div>
 
                 </div>
                 <div>
 
-                <RecentRides />
+                    <RecentRides />
                 </div>
-            <Footer />
+                <Footer />
             </div>
 
         </>
