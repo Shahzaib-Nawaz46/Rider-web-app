@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider App - OpenStreetMap Search</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .search-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #map {
+            height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .results {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .result-item:hover {
+            background: #f9f9f9;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .result-address {
+            color: #666;
+            font-size: 14px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Rider App - Place Search</h1>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search for places (e.g., Saddar Karachi, Clifton Beach)">
+            <button onclick="searchPlace()">Search</button>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map centered on Karachi
+        const map = L.map('map').setView([24.8607, 67.0011], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        let markers = [];
+
+        // Search place function
+        function searchPlace() {
+            const query = document.getElementById('searchInput').value;
+            const resultsDiv = document.getElementById('results');
+
+            if (!query.trim()) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+
+            // Simple fetch without async/await
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10`;
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(results => {
+                    // Clear previous markers
+                    markers.forEach(marker => map.removeLayer(marker));
+                    markers = [];
+
+                    if (results.length === 0) {
+                        resultsDiv.innerHTML = '<div class="no-results">No results found. Try a different search term.</div>';
+                        return;
+                    }
+
+                    // Display results
+                    let html = '';
+                    results.forEach((place, index) => {
+                        html += `
+                            <div class="result-item" onclick="showOnMap(${place.lat}, ${place.lon}, ${index})">
+                                <div class="result-name">${index + 1}. ${place.name || 'Unnamed Place'}</div>
+                                <div class="result-address">${place.display_name}</div>
+                            </div>
+                        `;
+
+                        // Add marker to map
+                        const marker = L.marker([place.lat, place.lon])
+                            .addTo(map)
+                            .bindPopup(`<b>${place.name || 'Place'}</b><br>${place.display_name}`);
+                        
+                        markers.push(marker);
+                    });
+
+                    resultsDiv.innerHTML = html;
+
+                    // Fit map to show all markers
+                    if (markers.length > 0) {
+                        const group = new L.featureGroup(markers);
+                        map.fitBounds(group.getBounds().pad(0.1));
+                    }
+                })
+                .catch(error => {
+                    resultsDiv.innerHTML = '<div class="no-results">Error searching. Please check your internet connection.</div>';
+                    console.error('Search error:', error);
+                });
+        }
+
+        // Show place on map
+        function showOnMap(lat, lon, index) {
+            map.setView([lat, lon], 16);
+            markers[index].openPopup();
+        }
+
+        // Search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPlace();
+            }
+        });
+    </script>
+</body>
+</html>
