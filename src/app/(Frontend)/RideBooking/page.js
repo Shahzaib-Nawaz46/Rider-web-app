@@ -7,9 +7,9 @@ import { RxStopwatch } from "react-icons/rx";
 import { GoHome } from "react-icons/go";
 import { RiHomeOfficeLine } from "react-icons/ri";
 import { LuMapPin } from "react-icons/lu";
-import Vehicles from "@/app/VehicleSwiper/page";
-import Footer from '@/app/(components)/Footer/page';
-import RecentRides from "@/app/(components)/RecentRides/page"
+import Vehicles from "@/app/(Frontend)/VehicleSwiper/page";
+import Footer from '@/app/(Frontend)/Footer/page';
+import RecentRides from "@/app/(Frontend)/RecentRides/page"
 const page = () => {
     return (
         <>
