@@ -1,8 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import PhoneInput from "@/app/components/PhoneInput";
-import PinInput from "@/app/components/PinInput";
-import Link from "next/link";
+import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
+import PinInput from "@/app/(Frontend)/components/PinInput";
 
 export default function LoginPage() {
     const [step, setStep] = useState(1); // 1: Mobile, 2: PIN

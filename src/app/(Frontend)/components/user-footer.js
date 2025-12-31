@@ -27,7 +27,7 @@ export default function Footer() {
               key={href}
               href={href}
               className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                isActive ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
+                isActive ? 'text-gray-1200'  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Icon className="w-6 h-6" />

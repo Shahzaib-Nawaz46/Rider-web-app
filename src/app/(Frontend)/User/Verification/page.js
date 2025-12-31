@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import PhoneInput from "@/app/components/PhoneInput";
+import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
 
 export default function Verification() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function Verification() {
     // For now, mirroring original behavior which was just a Link to Createpin
     // But since it's a function now, we route manually
     console.log("Phone submitted:", phoneNumber, country);
-    router.push("/Verification/Createpin");
+    router.push("/User/Verification/Createpin");
   };
 
   return (

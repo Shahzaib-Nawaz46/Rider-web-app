@@ -1,10 +1,14 @@
 "use client";
 import React from "react";
-import PinInput from "@/app/components/PinInput";
+import PinInput from "@/app/(Frontend)/components/PinInput";
+import { useRouter } from "next/navigation";
 
 const Page = () => {
+    const router = useRouter();
+  
   const handlePinSubmit = (pin) => {
     console.log("PIN Created:", pin);
+    router.push("/User")
     // Add logic for what happens after PIN creation
   };
 
