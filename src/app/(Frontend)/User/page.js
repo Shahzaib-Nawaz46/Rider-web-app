@@ -84,7 +84,7 @@ const page = () => {
 
                 </div>
                 <div className=" bg-[#1A1A1A]">
-                    <div className="h-10">
+                    <div className=" h-10">
 
                         <Vehicles />
                     </div>

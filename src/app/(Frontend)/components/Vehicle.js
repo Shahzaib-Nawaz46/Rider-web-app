@@ -7,11 +7,16 @@ import { FaUser } from "react-icons/fa";
 // Import Swiper styles
 import 'swiper/css';
 
-export default () => {
+export default ({
+  oncontiue,
+  selection = "Book Now"
+
+}) => {
   return (
 
-    <section className='mx-2  h-30 z-10'>
-      <Swiper
+    <section className=' mx-2  h-30 z-10'>
+      <Swiper 
+        className='flex'
         spaceBetween={5}
         slidesPerView={1.5}
         breakpoints={{
@@ -39,7 +44,6 @@ export default () => {
                   src={"/comfort-removebg-preview.png"}
                   alt='Comfort car'
                   fill
-                  unoptimized
                   className='p-2 pb-1 pt-3'
                 />
               </div>
@@ -56,7 +60,7 @@ export default () => {
 
               </div>
 
-              <button className='my-3 p-2 rounded-lg bg-black text-white'>Book Now</button>
+              <button className='my-3 p-2 rounded-lg bg-black text-white'>{selection}</button>
             </div>
 
           </div>
@@ -71,7 +75,6 @@ export default () => {
                 alt='Mini car'
                 width={700}
                 height={700}
-                unoptimized
                 className='p-2 pb-1 pt-3'
               />
             </div>
@@ -87,7 +90,7 @@ export default () => {
 
               </div>
 
-              <button className='my-3 p-2  rounded-lg bg-black text-white'>Book Now</button>
+              <button className='my-3 p-2  rounded-lg bg-black text-white'>{selection}</button>
             </div>
 
           </div>
@@ -95,7 +98,7 @@ export default () => {
 
         {/* slide for Rickhaw */}
         <SwiperSlide>
-          <div className='w-55 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md'>
+          <div className='w-50 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md'>
             <div className=''>
               <div className=' w-full h-25 relative'>
 
@@ -103,7 +106,6 @@ export default () => {
                   src={"/rickshaw-removebg-preview.png"}
                   alt='Comfort car'
                   fill
-                  unoptimized
                   className='p-2 pb-1 pt-3'
                 />
               </div>
@@ -120,14 +122,14 @@ export default () => {
 
               </div>
 
-              <button className='my-3 p-2 rounded-lg bg-black text-white'>Book Now</button>
+              <button className='my-3 p-2 rounded-lg bg-black text-white'>{selection}</button>
             </div>
 
           </div>
         </SwiperSlide>
         {/* slide for bike */}
         <SwiperSlide>
-          <div className='w-50 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md'>
+          <div className='w-55 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md'>
             <div>
               <div className='w-full h-25 relative'>
 
@@ -151,7 +153,7 @@ export default () => {
 
               </div>
 
-              <button className='my-3 p-2  rounded-lg bg-black text-white'>Book Now</button>
+              <button className='my-3 p-2  rounded-lg bg-black text-white'>{selection}</button>
             </div>
 
           </div>

@@ -8,7 +8,7 @@ const Page = () => {
   
   const handlePinSubmit = (pin) => {
     console.log("PIN Created:", pin);
-    router.push("/User/Verification/Policy");
+    router.push("/Rider/Verification/Policy")
     // Add logic for what happens after PIN creation
   };
 
