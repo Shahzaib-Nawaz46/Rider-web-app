@@ -16,7 +16,7 @@ export default function PhoneInput({
     const [selected, setSelected] = useState(defaultCountries[0]);
     const [open, setOpen] = useState(false);
     const [datas, setData] = useState([]);
-    const [phoneNumber, setPhoneNumber] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("")
 
     useEffect(() => {
         // Initial setup if needed
