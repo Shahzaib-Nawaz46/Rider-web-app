@@ -15,10 +15,11 @@ export default function PhoneInput({
     showCreateAccountLine = false,
     createAccountLink = "/Verification"
 }) {
-    const [selected, setSelected] = useState(defaultCountries[0]);
-    const [open, setOpen] = useState(false);
-    const [datas, setData] = useState([]);
-    const {phoneNumber, setPhoneNumber} = useContext(NumberContext) ;
+    const [selected, setSelected] = useState(defaultCountries[0]); //its tells  the selected country code
+    const [open, setOpen] = useState(false); // its tell the dropdown open or not 
+    const [datas, setData] = useState([]); // store the whole data 
+    const [Error, setError] = useState("")
+    const { formData, updateField } = useContext(NumberContext); // getting data to store in db 
     
 
     useEffect(() => {
@@ -41,14 +42,17 @@ export default function PhoneInput({
 
     useEffect(() => {
      
-    
+    console.log(formData.phoneNumber)
       
-    }, [phoneNumber])
+    }, [formData])
     
 
     const handleSubmit = () => {
-        if (onContinue) {
-            onContinue(phoneNumber, selected);
+        if (formData.phoneNumber.length>=10 && formData.phoneNumber.length<=16) {
+            setError("")
+            onContinue()
+        } else{
+         setError("Enter your Correct Phone number")
         }
     };
 
@@ -70,8 +74,7 @@ export default function PhoneInput({
                     type="number"
                     placeholder="000000000"
                     className="outline-none flex-1"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => updateField("phoneNumber",`${selected?.callingCode}${e.target.value}`)}
                 />
 
                 {/* Dropdown */}
@@ -98,10 +101,13 @@ export default function PhoneInput({
 
             <button
                 onClick={handleSubmit}
-                className="bg-black text-white py-3 mt-5 w-full max-w-sm rounded-xl text-center block"
+                className="bg-black text-white py-3 mt-5 w-full max-w-sm rounded-xl text-center block cursor-pointer"
             >
                 Continue
             </button>
+            {Error && (
+                <p className="m-3 text-red-600 font-bold text-xs">{Error}</p>
+            )}
 
             {showCreateAccountLine && (
                 <div className="mt-6 text-sm text-gray-600">

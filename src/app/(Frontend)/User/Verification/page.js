@@ -7,11 +7,8 @@ import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
 export default function Verification() {
   const router = useRouter();
 
-  const handleContinue = (phoneNumber, country) => {
-    // Logic to handle phone number submission
-    // For now, mirroring original behavior which was just a Link to Createpin
-    // But since it's a function now, we route manually
-    console.log("Phone submitted:", phoneNumber, country);
+  const handleContinue = () => {
+    
     router.push("/User/Verification/Createpin");
   };
 

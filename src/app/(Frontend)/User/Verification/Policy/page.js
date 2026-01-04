@@ -1,8 +1,15 @@
-
-
+"use client"
 import Link from "next/link"
+import { NumberContext } from "@/app/(Frontend)/Context/NumberContext";
+import { useState,useContext } from "react";
 
 export default function TermsAndConditions() {
+  const { formData, updateField } = useContext(NumberContext); // getting data to store in db 
+  const handleSubmit = ()=>{
+     updateField("policyAccepted",true)
+  }
+
+  console.log(formData)
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-lg p-6">
@@ -56,8 +63,9 @@ export default function TermsAndConditions() {
           </p>
         </div>
 
-     <Link
-  href="/RideBooking"
+     <Link 
+     onClick={handleSubmit}
+  href="/User/Verification/Finish"
   className="mt-6 w-full inline-flex items-center justify-center
              bg-black text-white py-3 rounded-xl font-medium
              hover:opacity-90 transition"

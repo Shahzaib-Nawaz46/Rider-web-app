@@ -1,5 +1,7 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef,useContext } from "react";
+import { NumberContext } from "../Context/NumberContext";
+
 
 export default function PinInput({
     onContinue,
@@ -10,6 +12,8 @@ export default function PinInput({
 }) {
     const [pin, setPin] = useState(["", "", "", ""]);
     const inputsRef = useRef([]);
+    const { formData, updateField } = useContext(NumberContext); // getting data to store in db 
+    const [Error, setError] = useState("")
 
     const handleChange = (value, index) => {
         if (!/^\d*$/.test(value)) return;
@@ -49,8 +53,14 @@ export default function PinInput({
     };
 
     const handleSubmit = () => {
-        if (onContinue) {
-            onContinue(pin.join(""));
+        if (pin.includes("")) {
+             setError("Please enter 4 digit pin");
+             return
+           
+        } else {
+            updateField("pin",pin.join(""))
+            setError("");
+            onContinue();
         }
     };
 
@@ -82,11 +92,17 @@ export default function PinInput({
                 {btnText}
             </button>
 
+          
+
             {footerText && (
                 <p className="text-xs text-gray-700">
                     {footerText}
                 </p>
             )}
+
+             {Error && 
+           <p className="m-5 text-sm text-red-600 font-semibold ">{Error}</p>
+           }
         </div>
     );
 }
