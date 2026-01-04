@@ -1,206 +1,723 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rider App - OpenStreetMap Search</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .search-box {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background: #45a049;
-        }
-        #map {
-            height: 500px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .results {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .result-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .result-item:hover {
-            background: #f9f9f9;
-        }
-        .result-item:last-child {
-            border-bottom: none;
-        }
-        .result-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .result-address {
-            color: #666;
-            font-size: 14px;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        .no-results {
-            text-align: center;
-            padding: 20px;
-            color: #999;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced Map with Multiple Routes</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      max-width: 350px;
+    }
+    .input-group {
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    .suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #4CAF50;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1001;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .suggestion-item {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+    .suggestion-item:hover {
+      background: #f0f9ff;
+    }
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #45a049;
+    }
+    .btn-secondary {
+      background: #2196F3;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #0b7dda;
+    }
+    .btn-danger {
+      background: #f44336;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #da190b;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    #routeOptions {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      max-width: 350px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: none;
+    }
+    .show-all-btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      background: #673AB7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .show-all-btn:hover {
+      background: #5E35B1;
+    }
+    #routeOptions h3 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #333;
+    }
+    .route-option {
+      padding: 12px;
+      margin: 8px 0;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+    }
+    .route-option:hover {
+      border-color: #4CAF50;
+      background: #f0f9ff;
+      transform: translateX(4px);
+    }
+    .route-option.selected {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    .route-option h4 {
+      font-size: 14px;
+      color: #2196F3;
+      margin-bottom: 6px;
+    }
+    .route-option p {
+      font-size: 12px;
+      color: #666;
+      margin: 3px 0;
+    }
+    .route-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #FFC107;
+      color: #000;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 6px;
+    }
+    .status {
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+    }
+    .status.info {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .status.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .map-click-hint {
+      padding: 6px 10px;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-top: 8px;
+      color: #856404;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🗺️ Rider App - Place Search</h1>
-        
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search for places (e.g., Saddar Karachi, Clifton Beach)">
-            <button onclick="searchPlace()">Search</button>
-        </div>
-
-        <div id="map"></div>
-
-        <div class="results" id="results"></div>
+  <div id="controls">
+    <div class="input-group">
+      <label>From Location</label>
+      <input id="from" placeholder="Type to search locations..." autocomplete="off" />
+      <div id="fromSuggestions" class="suggestions"></div>
     </div>
+    <div class="input-group">
+      <label>To Location</label>
+      <input id="to" placeholder="Type to search locations..." autocomplete="off" />
+      <div id="toSuggestions" class="suggestions"></div>
+    </div>
+    <div class="button-group">
+      <button class="btn-primary" onclick="findRoutes()">Find Routes</button>
+      <button class="btn-secondary" onclick="getCurrentLocation()">My Location</button>
+    </div>
+    <div class="button-group">
+      <button class="btn-danger" onclick="clearMap()">Clear Map</button>
+    </div>
+    <div class="map-click-hint">
+      💡 Tip: Click on map to set From/To locations
+    </div>
+    <div id="status"></div>
+  </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // Initialize map centered on Karachi
-        const map = L.map('map').setView([24.8607, 67.0011], 12);
+  <div id="routeOptions">
+    <h3>Available Routes</h3>
+    <div id="routeList"></div>
+    <button class="show-all-btn" onclick="showAllRoutes()" style="display:none;" id="showAllBtn">
+      🗺️ Show All Routes Together
+    </button>
+  </div>
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
+  <div id="map"></div>
 
-        let markers = [];
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([24.8607, 67.0011], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
 
-        // Search place function
-        function searchPlace() {
-            const query = document.getElementById('searchInput').value;
-            const resultsDiv = document.getElementById('results');
+    let fromMarker, toMarker, currentLocationMarker;
+    let routeLines = [];
+    let allAvailableRoutes = [];
+    let selectedRoute = null;
+    let clickMode = 'from';
+    let fromCoords = null;
+    let toCoords = null;
+    let searchTimeout;
+    let showingAllRoutes = false;
 
-            if (!query.trim()) {
-                alert('Please enter a search query');
-                return;
-            }
+    // Autocomplete functionality
+    const fromInput = document.getElementById('from');
+    const toInput = document.getElementById('to');
+    const fromSuggestions = document.getElementById('fromSuggestions');
+    const toSuggestions = document.getElementById('toSuggestions');
 
-            resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+    fromInput.addEventListener('input', function() {
+      handleSearch(this.value, fromSuggestions, 'from');
+    });
 
-            // Simple fetch without async/await
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=10`;
+    toInput.addEventListener('input', function() {
+      handleSearch(this.value, toSuggestions, 'to');
+    });
+
+    async function handleSearch(query, suggestionsDiv, type) {
+      clearTimeout(searchTimeout);
+      
+      if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
+          );
+          const data = await res.json();
+          
+          if (data.length > 0) {
+            displaySuggestions(data, suggestionsDiv, type);
+          } else {
+            suggestionsDiv.style.display = 'none';
+          }
+        } catch (err) {
+          console.error('Search error:', err);
+        }
+      }, 300);
+    }
+
+    function displaySuggestions(results, suggestionsDiv, type) {
+      suggestionsDiv.innerHTML = '';
+      
+      results.forEach(result => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = result.display_name;
+        
+        div.onclick = () => {
+          if (type === 'from') {
+            fromInput.value = result.display_name;
+            fromCoords = [parseFloat(result.lat), parseFloat(result.lon)];
             
-            fetch(url)
-                .then(response => response.json())
-                .then(results => {
-                    // Clear previous markers
-                    markers.forEach(marker => map.removeLayer(marker));
-                    markers = [];
+            if (fromMarker) map.removeLayer(fromMarker);
+            fromMarker = L.marker(fromCoords, {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              })
+            }).addTo(map).bindPopup('From: ' + result.display_name);
+            
+            map.setView(fromCoords, 13);
+          } else {
+            toInput.value = result.display_name;
+            toCoords = [parseFloat(result.lat), parseFloat(result.lon)];
+            
+            if (toMarker) map.removeLayer(toMarker);
+            toMarker = L.marker(toCoords, {
+              icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              })
+            }).addTo(map).bindPopup('To: ' + result.display_name);
+            
+            map.setView(toCoords, 13);
+          }
+          
+          suggestionsDiv.style.display = 'none';
+        };
+        
+        suggestionsDiv.appendChild(div);
+      });
+      
+      suggestionsDiv.style.display = 'block';
+    }
 
-                    if (results.length === 0) {
-                        resultsDiv.innerHTML = '<div class="no-results">No results found. Try a different search term.</div>';
-                        return;
-                    }
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.input-group')) {
+        fromSuggestions.style.display = 'none';
+        toSuggestions.style.display = 'none';
+      }
+    });
 
-                    // Display results
-                    let html = '';
-                    results.forEach((place, index) => {
-                        html += `
-                            <div class="result-item" onclick="showOnMap(${place.lat}, ${place.lon}, ${index})">
-                                <div class="result-name">${index + 1}. ${place.name || 'Unnamed Place'}</div>
-                                <div class="result-address">${place.display_name}</div>
-                            </div>
-                        `;
+    // Map click handler
+    map.on('click', async function(e) {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      
+      if (clickMode === 'from') {
+        fromCoords = [lat, lng];
+        if (fromMarker) map.removeLayer(fromMarker);
+        fromMarker = L.marker([lat, lng], {
+          icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })
+        }).addTo(map).bindPopup("From: Getting address...").openPopup();
+        
+        const address = await reverseGeocode(lat, lng);
+        document.getElementById('from').value = address;
+        fromMarker.getPopup().setContent(`From: ${address}`);
+        clickMode = 'to';
+        showStatus('Now click on map to set destination', 'info');
+      } else {
+        toCoords = [lat, lng];
+        if (toMarker) map.removeLayer(toMarker);
+        toMarker = L.marker([lat, lng], {
+          icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })
+        }).addTo(map).bindPopup("To: Getting address...").openPopup();
+        
+        const address = await reverseGeocode(lat, lng);
+        document.getElementById('to').value = address;
+        toMarker.getPopup().setContent(`To: ${address}`);
+        clickMode = 'from';
+        showStatus('Locations set! Click "Find Routes" to see options', 'success');
+      }
+    });
 
-                        // Add marker to map
-                        const marker = L.marker([place.lat, place.lon])
-                            .addTo(map)
-                            .bindPopup(`<b>${place.name || 'Place'}</b><br>${place.display_name}`);
-                        
-                        markers.push(marker);
-                    });
+    async function reverseGeocode(lat, lng) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+        );
+        const data = await res.json();
+        return data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      } catch (err) {
+        return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+    }
 
-                    resultsDiv.innerHTML = html;
-
-                    // Fit map to show all markers
-                    if (markers.length > 0) {
-                        const group = new L.featureGroup(markers);
-                        map.fitBounds(group.getBounds().pad(0.1));
-                    }
-                })
-                .catch(error => {
-                    resultsDiv.innerHTML = '<div class="no-results">Error searching. Please check your internet connection.</div>';
-                    console.error('Search error:', error);
-                });
+    async function findRoutes() {
+      try {
+        showStatus('Searching for all possible routes...', 'info');
+        
+        if (!fromCoords || !toCoords) {
+          showStatus('Please select both From and To locations', 'error');
+          return;
         }
 
-        // Show place on map
-        function showOnMap(lat, lon, index) {
-            map.setView([lat, lon], 16);
-            markers[index].openPopup();
-        }
+        clearRoutes();
+        allAvailableRoutes = [];
 
-        // Search on Enter key
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchPlace();
+        // Use OSRM with alternatives parameter to get multiple routes
+        const url = `https://router.project-osrm.org/route/v1/driving/${fromCoords[1]},${fromCoords[0]};${toCoords[1]},${toCoords[0]}?alternatives=true&steps=true&overview=full&geometries=geojson&continue_straight=false`;
+        
+        const routeRes = await fetch(url);
+        const routeData = await routeRes.json();
+
+        if (routeData.routes && routeData.routes.length > 0) {
+          // Get all available routes
+          allAvailableRoutes = routeData.routes;
+          
+          // Also try to get more alternative routes by adding waypoints
+          try {
+            // Calculate intermediate points for alternative routes
+            const midLat = (fromCoords[0] + toCoords[0]) / 2;
+            const midLng = (fromCoords[1] + toCoords[1]) / 2;
+            
+            // Offset points to get different routes
+            const offsets = [
+              [0.05, 0.05],
+              [-0.05, -0.05],
+              [0.05, -0.05],
+              [-0.05, 0.05]
+            ];
+            
+            for (let offset of offsets) {
+              const wayLat = midLat + offset[0];
+              const wayLng = midLng + offset[1];
+              
+              const altUrl = `https://router.project-osrm.org/route/v1/driving/${fromCoords[1]},${fromCoords[0]};${wayLng},${wayLat};${toCoords[1]},${toCoords[0]}?overview=full&geometries=geojson`;
+              
+              try {
+                const altRes = await fetch(altUrl);
+                const altData = await altRes.json();
+                
+                if (altData.routes && altData.routes.length > 0) {
+                  const route = altData.routes[0];
+                  // Check if this route is significantly different
+                  const isDifferent = allAvailableRoutes.every(existingRoute => {
+                    const distDiff = Math.abs(existingRoute.distance - route.distance);
+                    const timeDiff = Math.abs(existingRoute.duration - route.duration);
+                    return distDiff > 500 || timeDiff > 180;
+                  });
+                  
+                  if (isDifferent) {
+                    allAvailableRoutes.push(route);
+                  }
+                }
+              } catch (err) {
+                console.log('Alternative route error:', err);
+              }
             }
+          } catch (err) {
+            console.log('Error finding additional routes:', err);
+          }
+        }
+
+        if (allAvailableRoutes.length === 0) {
+          showStatus('No routes found between these locations', 'error');
+          return;
+        }
+
+        // Sort routes by duration (fastest first)
+        allAvailableRoutes.sort((a, b) => a.duration - b.duration);
+        
+        // Remove duplicates based on similar distance and time
+        const uniqueRoutes = [];
+        allAvailableRoutes.forEach(route => {
+          const isDuplicate = uniqueRoutes.some(existing => {
+            const distDiff = Math.abs(existing.distance - route.distance);
+            const timeDiff = Math.abs(existing.duration - route.duration);
+            return distDiff < 500 && timeDiff < 180;
+          });
+          if (!isDuplicate) {
+            uniqueRoutes.push(route);
+          }
         });
-    </script>
+        
+        allAvailableRoutes = uniqueRoutes;
+
+        displayRouteOptions(allAvailableRoutes);
+        showStatus(`Found ${allAvailableRoutes.length} different route(s)`, 'success');
+        
+        // Show the "Show All Routes" button if more than 1 route
+        if (allAvailableRoutes.length > 1) {
+          document.getElementById('showAllBtn').style.display = 'block';
+        }
+        
+        map.fitBounds([fromCoords, toCoords], { padding: [50, 50] });
+      } catch (err) {
+        showStatus(err.message || 'Error finding routes', 'error');
+      }
+    }
+
+    function displayRouteOptions(routes) {
+      const routeList = document.getElementById('routeList');
+      routeList.innerHTML = '';
+      
+      const colors = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#8BC34A', '#FFC107'];
+      
+      routes.forEach((route, index) => {
+        const km = (route.distance / 1000).toFixed(1);
+        const hours = Math.floor(route.duration / 3600);
+        const mins = Math.floor((route.duration % 3600) / 60);
+        const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} min`;
+        
+        const isFastest = index === 0;
+        const isShortest = route.distance === Math.min(...routes.map(r => r.distance));
+        
+        const div = document.createElement('div');
+        div.className = 'route-option';
+        div.innerHTML = `
+          <h4>
+            Route ${index + 1}
+            ${isFastest ? '<span class="route-badge">Fastest</span>' : ''}
+            ${isShortest && !isFastest ? '<span class="route-badge">Shortest</span>' : ''}
+          </h4>
+          <p>📏 Distance: ${km} km</p>
+          <p>⏱️ Duration: ${timeStr}</p>
+          <p style="color: ${colors[index % colors.length]};">● Route Color</p>
+        `;
+        
+        div.onclick = () => selectRoute(route, index, colors[index % colors.length], div);
+        routeList.appendChild(div);
+      });
+      
+      document.getElementById('routeOptions').style.display = 'block';
+      
+      if (routes.length > 0 && !showingAllRoutes) {
+        const firstOption = routeList.querySelector('.route-option');
+        selectRoute(routes[0], 0, colors[0], firstOption);
+      }
+    }
+
+    function showAllRoutes() {
+      clearRoutes();
+      showingAllRoutes = true;
+      
+      const colors = ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#F44336', '#00BCD4', '#8BC34A', '#FFC107'];
+      
+      allAvailableRoutes.forEach((route, index) => {
+        const line = L.geoJSON(route.geometry, {
+          style: { 
+            color: colors[index % colors.length], 
+            weight: 5, 
+            opacity: 0.7 
+          }
+        }).addTo(map);
+        
+        routeLines.push(line);
+      });
+      
+      // Highlight all route options
+      const options = document.querySelectorAll('.route-option');
+      options.forEach(opt => opt.classList.add('selected'));
+      
+      // Fit map to show all routes
+      const allCoords = [];
+      allAvailableRoutes.forEach(route => {
+        route.geometry.coordinates.forEach(coord => {
+          allCoords.push([coord[1], coord[0]]);
+        });
+      });
+      
+      if (allCoords.length > 0) {
+        const bounds = L.latLngBounds(allCoords);
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+      
+      showStatus(`Showing all ${allAvailableRoutes.length} routes together`, 'success');
+      
+      // Change button text
+      const btn = document.getElementById('showAllBtn');
+      btn.textContent = '🔄 Show Individual Routes';
+      btn.onclick = function() {
+        showingAllRoutes = false;
+        btn.textContent = '🗺️ Show All Routes Together';
+        btn.onclick = showAllRoutes;
+        displayRouteOptions(allAvailableRoutes);
+      };
+    }
+
+    function selectRoute(route, index, color, element) {
+      clearRoutes();
+      
+      const options = document.querySelectorAll('.route-option');
+      options.forEach(opt => opt.classList.remove('selected'));
+      if (element) element.classList.add('selected');
+      
+      const line = L.geoJSON(route.geometry, {
+        style: { color: color, weight: 6, opacity: 0.8 }
+      }).addTo(map);
+      
+      routeLines.push(line);
+      selectedRoute = route;
+      
+      map.fitBounds(line.getBounds(), { padding: [80, 80] });
+    }
+
+    function clearRoutes() {
+      routeLines.forEach(line => map.removeLayer(line));
+      routeLines = [];
+    }
+
+    function clearMap() {
+      if (fromMarker) map.removeLayer(fromMarker);
+      if (toMarker) map.removeLayer(toMarker);
+      if (currentLocationMarker) map.removeLayer(currentLocationMarker);
+      clearRoutes();
+      
+      fromMarker = null;
+      toMarker = null;
+      fromCoords = null;
+      toCoords = null;
+      allAvailableRoutes = [];
+      showingAllRoutes = false;
+      
+      document.getElementById('from').value = '';
+      document.getElementById('to').value = '';
+      document.getElementById('routeOptions').style.display = 'none';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('showAllBtn').style.display = 'none';
+      fromSuggestions.style.display = 'none';
+      toSuggestions.style.display = 'none';
+      
+      clickMode = 'from';
+      showStatus('Map cleared. Start typing or click on map', 'info');
+    }
+
+    function getCurrentLocation() {
+      if (!navigator.geolocation) {
+        showStatus('Geolocation not supported by your browser', 'error');
+        return;
+      }
+      
+      showStatus('Getting your location...', 'info');
+      
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          if (currentLocationMarker) map.removeLayer(currentLocationMarker);
+          if (fromMarker) map.removeLayer(fromMarker);
+          
+          fromCoords = [lat, lng];
+          fromMarker = L.marker([lat, lng], {
+            icon: L.icon({
+              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              shadowSize: [41, 41]
+            })
+          }).addTo(map).bindPopup("Your Current Location").openPopup();
+          
+          map.setView([lat, lng], 14);
+          
+          const address = await reverseGeocode(lat, lng);
+          document.getElementById('from').value = address;
+          
+          showStatus('Location set! Now select destination', 'success');
+          clickMode = 'to';
+        },
+        (error) => {
+          showStatus('Unable to get location: ' + error.message, 'error');
+        }
+      );
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.innerHTML = message;
+      status.className = 'status ' + type;
+    }
+  </script>
 </body>
 </html>

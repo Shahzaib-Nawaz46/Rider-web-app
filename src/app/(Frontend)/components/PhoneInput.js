@@ -1,9 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,  useContext } from "react";
 import Link from "next/link";
+import { NumberContext } from "../Context/NumberContext";
+import countries from "@/app/(Frontend)/components/Country.json"
 
 const defaultCountries = [
-    { callingCodes: ["+92"], dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
+    { callingCode: ["+92"], dial: "+92", flag: "https://flagsapi.com/PK/flat/64.png" },
 ];
 
 export default function PhoneInput({
@@ -16,7 +18,8 @@ export default function PhoneInput({
     const [selected, setSelected] = useState(defaultCountries[0]);
     const [open, setOpen] = useState(false);
     const [datas, setData] = useState([]);
-    const [phoneNumber, setPhoneNumber] = useState("");
+    const {phoneNumber, setPhoneNumber} = useContext(NumberContext) ;
+    
 
     useEffect(() => {
         // Initial setup if needed
@@ -26,14 +29,8 @@ export default function PhoneInput({
     useEffect(() => {
         const fetchdata = async () => {
             try {
-                const res = await fetch("/Backend/api/countries");
-                if (res.ok) {
-                    const data = await res.json();
-                    setData(data);
-                } else {
-                    // Fallback or silence error if backend not ready
-                    setData(defaultCountries);
-                }
+                setData(countries);
+                 
             } catch (err) {
                 console.log(err);
                 setData(defaultCountries);
@@ -41,6 +38,13 @@ export default function PhoneInput({
         };
         fetchdata();
     }, []);
+
+    useEffect(() => {
+     
+    
+      
+    }, [phoneNumber])
+    
 
     const handleSubmit = () => {
         if (onContinue) {
@@ -58,7 +62,7 @@ export default function PhoneInput({
                 {/* Flag selector */}
                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => setOpen(!open)}>
                     <img src={selected?.flag} className="w-6 h-6 rounded-full" alt="flag" />
-                    <span>{selected?.callingCodes}</span>
+                    <span>{selected?.callingCode}</span>
                 </div>
 
                 {/* Phone input */}

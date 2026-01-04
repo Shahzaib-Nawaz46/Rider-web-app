@@ -1,5 +1,6 @@
 
 import "./globals.css";
+import { NumberProvider } from "./(Frontend)/Context/NumberContext"
 
 // src/app/layout.js
 
@@ -23,7 +24,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <NumberProvider> 
         {children}
+         </NumberProvider> 
       </body>
     </html>
   );
