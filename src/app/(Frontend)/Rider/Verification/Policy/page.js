@@ -8,6 +8,7 @@ export default function TermsAndConditions() {
   const handleSubmit = ()=>{
      updateField("policyAccepted",true)
      
+     
   }
 
   console.log(formData)

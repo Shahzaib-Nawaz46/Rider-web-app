@@ -1,25 +1,35 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState,useContext } from "react";
 import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
 import PinInput from "@/app/(Frontend)/components/PinInput";
+import { NumberContext } from "@/app/(Frontend)/Context/NumberContext";
+
 
 export default function LoginPage() {
-    const [step, setStep] = useState(1); // 1: Mobile, 2: PIN
+    const [step, setStep] = useState(1); // 1: phonenumber, 2: PIN
     const [mobile, setMobile] = useState("");
+    const { formData, updateField } = useContext(NumberContext); // getting data to verify in db 
+    
 
-    // Mobile Step Handler
-    const handleMobileSubmit = (phoneNumber, country) => {
-        if (phoneNumber.length > 0) {
-            setMobile(phoneNumber);
+
+    // phonenumber Step Handler
+    const handleMobileSubmit = () => {
+        if (formData.phoneNumber.length>=10  && formData.phoneNumber.length<=16) {
             setStep(2);
         }
     };
 
     // PIN Step Handler
     const handlePinSubmit = (pin) => {
-        console.log("Logging in with", mobile, pin);
-        alert(`Logging in with Mobile: ${mobile}, PIN: ${pin}`);
-        // Add actual login logic here
+        console.log(formData)
+        if(pin)
+            {
+            if (formData.pin.length==4) {
+            
+            console.log(formData)
+        } 
+        }
+      
     };
 
     return (

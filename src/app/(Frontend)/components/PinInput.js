@@ -52,13 +52,13 @@ export default function PinInput({
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async() => {
         if (pin.includes("")) {
              setError("Please enter 4 digit pin");
              return
            
         } else {
-            updateField("pin",pin.join(""))
+            await updateField("pin",pin.join(""))
             setError("");
             onContinue();
         }

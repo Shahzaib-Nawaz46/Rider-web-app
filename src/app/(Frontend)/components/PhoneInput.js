@@ -40,11 +40,7 @@ export default function PhoneInput({
         fetchdata();
     }, []);
 
-    useEffect(() => {
-     
-    console.log(formData.phoneNumber)
-      
-    }, [formData])
+   
     
 
     const handleSubmit = () => {

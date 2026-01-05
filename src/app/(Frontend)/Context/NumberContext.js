@@ -9,7 +9,6 @@ export const NumberProvider = ({ children }) => {
   const [formData, setFormData] = useState({
     phoneNumber: "",
     pin: null,
-    name: "",
     policyAccepted: false,
     FirstName: "",
     LastName:""
