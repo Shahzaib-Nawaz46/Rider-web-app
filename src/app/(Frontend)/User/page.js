@@ -1,4 +1,5 @@
 "use client"
+import React, { useState, useEffect } from "react";
 import Image from "next/image"
 import { CiSearch } from "react-icons/ci";
 import { FaChevronDown } from "react-icons/fa";
@@ -11,6 +12,15 @@ import Vehicles from "@/app/(Frontend)/components/Vehicle";
 import Footer from '@/app/(Frontend)/components/user-footer';
 import RecentRides from "@/app/(Frontend)/User/RecentRides/page"
 const page = () => {
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+    }, []);
+
     return (
         <>
             <div className="">
@@ -18,7 +28,7 @@ const page = () => {
                     <div className="flex justify-between p-5"> {/* For Top section*/}
 
                         <div> {/* left section*/}
-                            <h1 className="text-2xl font-bold text-[#95CB33]">Hello Mohit</h1>
+                            <h1 className="text-2xl font-bold text-[#95CB33]">Hello {user ? user.FirstName : "Guest"}</h1>
                             <p className="text-white">How are you doing Today</p>
                         </div>
 

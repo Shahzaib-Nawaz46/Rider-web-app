@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef,useContext } from "react";
+import React, { useState, useRef, useContext } from "react";
 import { NumberContext } from "../Context/NumberContext";
 
 
@@ -8,12 +8,14 @@ export default function PinInput({
     title = "Create Your Pin",
     subtitle = "Create a 4-digit PIN to secure your account",
     footerText = "You’ll use this PIN to login next time",
-    btnText = "Continue"
+    btnText = "Continue",
+    isLoading = false,
+    error = ""
 }) {
     const [pin, setPin] = useState(["", "", "", ""]);
     const inputsRef = useRef([]);
     const { formData, updateField } = useContext(NumberContext); // getting data to store in db 
-    const [Error, setError] = useState("")
+    const [localError, setLocalError] = useState("")
 
     const handleChange = (value, index) => {
         if (!/^\d*$/.test(value)) return;
@@ -52,15 +54,15 @@ export default function PinInput({
         }
     };
 
-    const handleSubmit = async() => {
+    const handleSubmit = async () => {
         if (pin.includes("")) {
-             setError("Please enter 4 digit pin");
-             return
-           
+            setLocalError("Please enter 4 digit pin");
+            return
+
         } else {
-            await updateField("pin",pin.join(""))
-            setError("");
-            onContinue();
+            await updateField("pin", pin.join(""))
+            setLocalError("");
+            onContinue(pin.join(""));
         }
     };
 
@@ -87,12 +89,17 @@ export default function PinInput({
 
             <button
                 onClick={handleSubmit}
-                className="border p-3 w-80 m-5 rounded-lg bg-black text-white font-semibold cursor-pointer"
+                disabled={isLoading}
+                className={`border p-3 w-80 m-5 rounded-lg bg-black text-white font-semibold flex justify-center items-center ${isLoading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-                {btnText}
+                {isLoading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                    btnText
+                )}
             </button>
 
-          
+
 
             {footerText && (
                 <p className="text-xs text-gray-700">
@@ -100,9 +107,9 @@ export default function PinInput({
                 </p>
             )}
 
-             {Error && 
-           <p className="m-5 text-sm text-red-600 font-semibold ">{Error}</p>
-           }
+            {(localError || error) &&
+                <p className="m-5 text-sm text-red-600 font-semibold ">{localError || error}</p>
+            }
         </div>
     );
 }

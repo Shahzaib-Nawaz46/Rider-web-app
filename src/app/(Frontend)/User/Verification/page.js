@@ -30,8 +30,8 @@ export default function Verification() {
       console.log("Phone check result:", res.data);
 
       if (res.data.exists) {
-        // If number exists, do NOT go to next page. Show error.
-        setError("This number is already registered, try another one");
+        // If number exists, redirect to Login
+        router.push("/User/Login");
       } else {
         // If number does NOT exist, proceed (assuming this is registration flow for new users)
         router.push("/User/Verification/Createpin");
