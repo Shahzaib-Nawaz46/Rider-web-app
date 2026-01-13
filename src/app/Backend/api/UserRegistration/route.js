@@ -1,4 +1,5 @@
 import connectToDatabase from "@/app/lib/db";
+import bcrypt from 'bcrypt';
 
 export async function POST(request) {
   try {
@@ -19,11 +20,13 @@ export async function POST(request) {
       );
     }
 
+    const hashedPassword = await bcrypt.hash(pin, 10);
+
     const conn = await connectToDatabase();
 
     const [result] = await conn.execute(
       "INSERT INTO users (phoneNumber, pin, policyAccepted, FirstName, LastName) VALUES (?, ?, ?, ?, ?)",
-      [phoneNumber, pin, policyAccepted, FirstName, LastName]
+      [phoneNumber, hashedPassword, policyAccepted, FirstName, LastName]
     );
 
     await conn.end();

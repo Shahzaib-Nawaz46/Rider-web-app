@@ -1,4 +1,5 @@
 import connectToDatabase from "@/app/lib/db";
+import bcrypt from 'bcrypt';
 
 export async function POST(request) {
     try {
@@ -13,37 +14,37 @@ export async function POST(request) {
 
         const conn = await connectToDatabase();
 
-        // Query to check if user exists with matching phone and pin
+        // Query to find user by phone number
         const [rows] = await conn.execute(
-            "SELECT id FROM users WHERE phoneNumber = ? AND pin = ?",
-            [phoneNumber, pin]
+            "SELECT id, FirstName, LastName, phoneNumber, pin FROM users WHERE phoneNumber = ?",
+            [phoneNumber]
         );
 
         await conn.end();
 
         if (rows.length > 0) {
-            // Fetch the user details to return
-            const [userRows] = await conn.execute(
-                "SELECT id, FirstName, LastName, phoneNumber FROM users WHERE phoneNumber = ? AND pin = ?",
-                [phoneNumber, pin]
-            );
+            const user = rows[0];
+            const isMatch = await bcrypt.compare(pin, user.pin);
 
-            const user = userRows[0];
+            if (isMatch) {
+                // Remove pin from user object before sending response
+                const { pin: dbPin, ...userWithoutPin } = user;
 
-            return Response.json(
-                {
-                    success: true,
-                    message: "Login successful",
-                    user: user
-                },
-                { status: 200 }
-            );
-        } else {
-            return Response.json(
-                { error: "Invalid Phone Number or PIN" },
-                { status: 401 }
-            );
+                return Response.json(
+                    {
+                        success: true,
+                        message: "Login successful",
+                        user: userWithoutPin
+                    },
+                    { status: 200 }
+                );
+            }
         }
+
+        return Response.json(
+            { error: "Invalid Phone Number or PIN" },
+            { status: 401 }
+        );
     } catch (error) {
         console.error("Login Verify Error:", error);
         return Response.json(

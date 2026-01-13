@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectToDatabase from "@/app/lib/db";
+import bcrypt from "bcrypt";
 
 const handler = NextAuth({
   providers: [
@@ -17,8 +18,8 @@ const handler = NextAuth({
         const conn = await connectToDatabase();
 
         const [rows] = await conn.execute(
-          "SELECT id, FirstName, LastName FROM users WHERE phoneNumber = ? AND pin = ?",
-          [credentials.phoneNumber, credentials.pin]
+          "SELECT id, FirstName, LastName,pin FROM users WHERE phoneNumber = ?",
+          [credentials.phoneNumber]
         );
 
         await conn.end();
@@ -26,6 +27,10 @@ const handler = NextAuth({
         if (rows.length === 0) return null;
 
         const user = rows[0];
+        
+        console.log("User Found:", rows);
+        const isMatch = await bcrypt.compare(credentials.pin, user.pin);    
+        if(!isMatch) return null;
 
         // returning user and saving data in token
         return {
