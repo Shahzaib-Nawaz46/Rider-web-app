@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { signIn } from "next-auth/react";
 import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
 import PinInput from "@/app/(Frontend)/components/PinInput";
 import { NumberContext } from "@/app/(Frontend)/Context/NumberContext";
@@ -32,16 +32,15 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const res = await axios.post("/Backend/api/LoginVerify", {
+            const result = await signIn("credentials", {
+                redirect: false,
                 phoneNumber: formData.phoneNumber,
                 pin: pin,
             });
 
-            if (res.status === 200) {
-                // Login successful
-                if (res.data.user) {
-                    localStorage.setItem("user", JSON.stringify(res.data.user));
-                }
+            if (result.error) {
+                setError("Invalid Phone Number or PIN");
+            } else {
                 router.push("/User");
             }
         } catch (error) {

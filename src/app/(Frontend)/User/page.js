@@ -1,5 +1,6 @@
 "use client"
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image"
 import { CiSearch } from "react-icons/ci";
 import { FaChevronDown } from "react-icons/fa";
@@ -10,17 +11,20 @@ import { RiHomeOfficeLine } from "react-icons/ri";
 import { LuMapPin } from "react-icons/lu";
 import Vehicles from "@/app/(Frontend)/components/Vehicle";
 import Footer from '@/app/(Frontend)/components/user-footer';
-import RecentRides from "@/app/(Frontend)/User/RecentRides/page"
+import RecentRides from "@/app/(Frontend)/User/RecentRides/page";
+import Loading from "@/app/loading";
 const page = () => {
-    const [user, setUser] = useState(null);
+      const { data: session, status } = useSession();
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    }, []);
+  if (status === "loading") {
+    return <Loading />;
+  }
 
+  if (!session) {
+    return <p>Not logged in</p>;
+  }
+
+  console.log(session.user.firstName);
     return (
         <>
             <div className="">
@@ -28,7 +32,7 @@ const page = () => {
                     <div className="flex justify-between p-5"> {/* For Top section*/}
 
                         <div> {/* left section*/}
-                            <h1 className="text-2xl font-bold text-[#95CB33]">Hello {user ? user.FirstName : "Guest"}</h1>
+                            <h1 className="text-2xl font-bold text-[#95CB33]">Hello {session?.user?.firstName || "Guest"}</h1>
                             <p className="text-white">How are you doing Today</p>
                         </div>
 

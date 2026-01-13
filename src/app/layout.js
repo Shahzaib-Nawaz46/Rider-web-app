@@ -1,6 +1,7 @@
 
 import "./globals.css";
 import { NumberProvider } from "./(Frontend)/Context/NumberContext"
+import AuthProvider from "./(Frontend)/components/SessionProvider";
 
 // src/app/layout.js
 
@@ -24,9 +25,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <NumberProvider> 
-        {children}
-         </NumberProvider> 
+        <AuthProvider>
+          <NumberProvider>
+            {children}
+          </NumberProvider>
+        </AuthProvider>
       </body>
     </html>
   );
