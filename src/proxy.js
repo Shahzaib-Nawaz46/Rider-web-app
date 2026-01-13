@@ -30,7 +30,7 @@ export async function proxy(request) {
     return NextResponse.next();
   }
 
-  // Auth check (NextAuth official way)
+  // Auth check 
   const token = await getToken({ req: request });
 
   if (token) {
