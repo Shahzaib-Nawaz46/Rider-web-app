@@ -21,7 +21,7 @@ export default function FinishProfile() {
     setError("");
 
     try {
-      const res = await axios.post("/Backend/api/UserRegistration", {
+      const res = await axios.post("/api/UserRegistration", {
         phoneNumber: formData.phoneNumber,
         pin: formData.pin,
         policyAccepted: formData.policyAccepted,

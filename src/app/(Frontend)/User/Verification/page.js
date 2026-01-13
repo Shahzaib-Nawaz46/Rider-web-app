@@ -23,7 +23,7 @@ export default function Verification() {
     setError(""); // Clear previous errors
 
     try {
-      const res = await axios.post("/Backend/api/CheckPhone", {
+      const res = await axios.post("/api/CheckPhone", {
         phoneNumber: formData.phoneNumber
       });
 
