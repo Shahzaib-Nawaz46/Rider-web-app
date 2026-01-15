@@ -36,7 +36,10 @@ export async function POST(request) {
                         message: "Rider Login successful",
                         user: { ...riderWithoutPin, role: 'rider' }
                     },
-                    { status: 200 }
+                    {
+                        status: 200,
+                        headers: { 'Set-Cookie': `rider_session=${rider.id}; Path=/; HttpOnly; SameSite=Strict` }
+                    }
                 );
             }
         }

@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import connectToDatabase from "@/app/lib/db";
-import bcrypt from "bcrypt";
+import { verifyUser, verifyRider } from "@/app/lib/authService";
 
 const handler = NextAuth({
   providers: [
@@ -10,60 +9,52 @@ const handler = NextAuth({
       credentials: {
         phoneNumber: { label: "Phone Number", type: "text" },
         pin: { label: "PIN", type: "password" },
+        loginType: { label: "Login Type", type: "text" }, // 'user' or 'rider'
       },
 
       async authorize(credentials) {
         if (!credentials) return null;
 
-        const conn = await connectToDatabase();
+        const { phoneNumber, pin, loginType } = credentials;
 
-        const [rows] = await conn.execute(
-          "SELECT id, FirstName, LastName,pin FROM users WHERE phoneNumber = ?",
-          [credentials.phoneNumber]
-        );
+        // Explicit check based on loginType
+        if (loginType === 'user') {
+          return await verifyUser(phoneNumber, pin);
+        } else if (loginType === 'rider') {
+          return await verifyRider(phoneNumber, pin);
+        }
 
-        await conn.end();
-
-        if (rows.length === 0) return null;
-
-        const user = rows[0];
-        
-        console.log("User Found:", rows);
-        const isMatch = await bcrypt.compare(credentials.pin, user.pin);    
-        if(!isMatch) return null;
-
-        // returning user and saving data in token
-        return {
-          id: user.id.toString(),
-          name: `${user.FirstName} ${user.LastName}`,
-          firstName: `${user.FirstName}`,
-          lastName: user.LastName,
-          phoneNumber: user.phoneNumber,
-          
-        };
+        // Optional: fallback to checking User then Rider if no type is provided (for backward compatibility if needed)
+        // For now, we strictly enforce type or return null to ensure "clean" logic as requested.
+        return null;
       },
     }),
   ],
 
   callbacks: {
-  async jwt({ token, user }) {
-    if (user) {
-      token.id = user.id;
-      token.firstName = user.firstName;
-      token.phoneNumber = user.phoneNumber;
-    }
-    return token;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.phoneNumber = user.phoneNumber;
+        token.role = user.role;
+        token.vehicleType = user.vehicleType;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.firstName = token.firstName;
+        session.user.lastName = token.lastName;
+        session.user.phoneNumber = token.phoneNumber;
+        session.user.role = token.role;
+        session.user.vehicleType = token.vehicleType;
+      }
+      return session;
+    },
   },
-  async session({ session, token }) {
-    if (session.user) {
-      session.user.id = token.id;
-      session.user.firstName = token.firstName;
-      session.user.phoneNumber = token.phoneNumber;
-    }
-    return session;
-  },
-},
-
 
   pages: {
     signIn: "/User/Login",
