@@ -1,17 +1,18 @@
 "use client";
-import React from "react";
-import Link from "next/link";
+import React, { useContext } from "react";
 import { useRouter } from "next/navigation";
 import PhoneInput from "@/app/(Frontend)/components/PhoneInput";
+import { NumberContext } from "@/app/(Frontend)/Context/NumberContext";
 
 export default function Verification() {
   const router = useRouter();
+  const { formData, updateField } = useContext(NumberContext);
 
-  const handleContinue = (phoneNumber, country) => {
-    // Logic to handle phone number submission
-    // For now, mirroring original behavior which was just a Link to Createpin
-    // But since it's a function now, we route manually
-    console.log("Phone submitted:", phoneNumber, country);
+  const handleContinue = () => {
+    // Validation is already done in PhoneInput partially, but we can double check
+    if (!formData.phoneNumber || formData.phoneNumber.length < 10) return;
+
+    // Proceed to next step
     router.push("/Rider/Verification/Createpin");
   };
 
@@ -19,8 +20,8 @@ export default function Verification() {
     <div className="flex flex-col items-center h-screen pt-32 px-4">
       <PhoneInput
         onContinue={handleContinue}
-        title="Welcome aboard or back"
-        subtitle="Enter your phone number"
+        title="Welcome Rider"
+        subtitle="Enter your phone number to start earning"
       />
     </div>
   );

@@ -14,27 +14,27 @@ export async function POST(request) {
 
         const conn = await connectToDatabase();
 
-        // Query to find user by phone number
+        // Query to find rider by phone number
         const [rows] = await conn.execute(
-            "SELECT id, FirstName, LastName, phoneNumber, pin FROM users WHERE phoneNumber = ?",
+            "SELECT id, FirstName, LastName, phoneNumber, pin, vehicleType FROM riders WHERE phoneNumber = ?",
             [phoneNumber]
         );
 
         await conn.end();
 
         if (rows.length > 0) {
-            const user = rows[0];
-            const isMatch = await bcrypt.compare(pin, user.pin);
+            const rider = rows[0];
+            const isMatch = await bcrypt.compare(pin, rider.pin);
 
             if (isMatch) {
-                // Remove pin from user object before sending response
-                const { pin: dbPin, ...userWithoutPin } = user;
+                // Remove pin from rider object before sending response
+                const { pin: dbPin, ...riderWithoutPin } = rider;
 
                 return Response.json(
                     {
                         success: true,
-                        message: "Login successful",
-                        user: { ...userWithoutPin, role: 'user' }
+                        message: "Rider Login successful",
+                        user: { ...riderWithoutPin, role: 'rider' }
                     },
                     { status: 200 }
                 );
@@ -46,7 +46,7 @@ export async function POST(request) {
             { status: 401 }
         );
     } catch (error) {
-        console.error("Login Verify Error:", error);
+        console.error("Rider Login Verify Error:", error);
         return Response.json(
             { error: "Database error" },
             { status: 500 }

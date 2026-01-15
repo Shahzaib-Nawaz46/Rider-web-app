@@ -8,33 +8,33 @@ import { FaUser } from "react-icons/fa";
 import 'swiper/css';
 
 export default ({
-  oncontiue,
+  onSelect,
   selection = "Book Now"
 
 }) => {
   return (
 
     <section className=' mx-2  h-30 z-10'>
-      <Swiper 
+      <Swiper
         className='flex'
         spaceBetween={5}
         slidesPerView={1.5}
         breakpoints={{
-    640: {   // tablets
-      slidesPerView: 2,
-      spaceBetween: 10,
-    },
-    1024: {  // laptops & desktops
-      slidesPerView: 3,
-      spaceBetween: 12,   // gap kam on big screen
-    },
-    1280: {  // large screens
-      slidesPerView: 3,
-      spaceBetween: 16,
-    },
-  }}
->
-      
+          640: {   // tablets
+            slidesPerView: 2,
+            spaceBetween: 10,
+          },
+          1024: {  // laptops & desktops
+            slidesPerView: 3,
+            spaceBetween: 12,   // gap kam on big screen
+          },
+          1280: {  // large screens
+            slidesPerView: 3,
+            spaceBetween: 16,
+          },
+        }}
+      >
+
         <SwiperSlide className='mx-4 '>
           <div className='w-50 h-55 border-2 border-gray-300 rounded-2xl bg-white shadow-md '>
             <div>
@@ -60,7 +60,12 @@ export default ({
 
               </div>
 
-              <button className='my-3 p-2 rounded-lg bg-black text-white'>{selection}</button>
+              <button
+                onClick={() => onSelect && onSelect('comfort')}
+                className='my-3 p-2 rounded-lg bg-black text-white w-full'
+              >
+                {selection}
+              </button>
             </div>
 
           </div>
@@ -90,7 +95,12 @@ export default ({
 
               </div>
 
-              <button className='my-3 p-2  rounded-lg bg-black text-white'>{selection}</button>
+              <button
+                onClick={() => onSelect && onSelect('mini')}
+                className='my-3 p-2  rounded-lg bg-black text-white w-full'
+              >
+                {selection}
+              </button>
             </div>
 
           </div>
@@ -122,7 +132,12 @@ export default ({
 
               </div>
 
-              <button className='my-3 p-2 rounded-lg bg-black text-white'>{selection}</button>
+              <button
+                onClick={() => onSelect && onSelect('rickshaw')}
+                className='my-3 p-2 rounded-lg bg-black text-white w-full'
+              >
+                {selection}
+              </button>
             </div>
 
           </div>
@@ -153,7 +168,12 @@ export default ({
 
               </div>
 
-              <button className='my-3 p-2  rounded-lg bg-black text-white'>{selection}</button>
+              <button
+                onClick={() => onSelect && onSelect('bike')}
+                className='my-3 p-2  rounded-lg bg-black text-white w-full'
+              >
+                {selection}
+              </button>
             </div>
 
           </div>

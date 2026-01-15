@@ -11,7 +11,8 @@ export const NumberProvider = ({ children }) => {
     pin: null,
     policyAccepted: false,
     FirstName: "",
-    LastName:""
+    LastName: "",
+    vehicleType: ""
   });
 
   // Function to update any field dynamically
