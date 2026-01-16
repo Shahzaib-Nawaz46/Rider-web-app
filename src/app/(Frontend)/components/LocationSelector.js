@@ -29,6 +29,7 @@ const LocationSelector = ({ isOpen, onClose, onSelectLocation }) => {
                 `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
             );
             const data = await response.json();
+            console.log(data)
             setSuggestions(data);
         } catch (error) {
             console.error("Error fetching suggestions:", error);
@@ -177,8 +178,8 @@ const LocationSelector = ({ isOpen, onClose, onSelectLocation }) => {
                                 onChange={(e) => handleInputChange(e.target.value, "source")}
                                 onFocus={() => setActiveInput("source")}
                                 className={`flex-1 p-3 bg-gray-100 rounded-lg outline-none border-2 ${activeInput === "source"
-                                        ? "border-[#95CB33]"
-                                        : "border-transparent"
+                                    ? "border-[#95CB33]"
+                                    : "border-transparent"
                                     }`}
                             />
                             <button
@@ -221,8 +222,8 @@ const LocationSelector = ({ isOpen, onClose, onSelectLocation }) => {
                             onChange={(e) => handleInputChange(e.target.value, "destination")}
                             onFocus={() => setActiveInput("destination")}
                             className={`w-full p-3 bg-gray-100 rounded-lg outline-none border-2 ${activeInput === "destination"
-                                    ? "border-[#95CB33]"
-                                    : "border-transparent"
+                                ? "border-[#95CB33]"
+                                : "border-transparent"
                                 }`}
                         />
 
@@ -244,6 +245,16 @@ const LocationSelector = ({ isOpen, onClose, onSelectLocation }) => {
                             </div>
                         )}
                     </div>
+
+                    {/* Book Rider Button */}
+                    {sourceCoords && destinationCoords && (
+                        <button
+                            onClick={() => onSelectLocation(sourceCoords, destinationCoords, source, destination)}
+                            className="w-full mt-4 bg-[#95CB33] text-black font-bold py-4 rounded-lg hover:bg-[#7fb028] transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                        >
+                            Book Rider
+                        </button>
+                    )}
                 </div>
             </div>
 

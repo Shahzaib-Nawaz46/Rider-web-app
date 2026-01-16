@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from "react";
 import LocationSelector from "@/app/(Frontend)/components/LocationSelector";
+import FindingRider from "@/app/(Frontend)/components/FindingRider";
 import { useSession } from "next-auth/react";
 import Image from "next/image"
 import { CiSearch } from "react-icons/ci";
@@ -17,22 +18,29 @@ import Loading from "@/app/loading";
 const page = () => {
     const { data: session, status } = useSession();
     const [isLocationSelectionOpen, setIsLocationSelectionOpen] = useState(false);
+    const [isFindingRider, setIsFindingRider] = useState(false);
+    const [selectedLocations, setSelectedLocations] = useState({
+        source: null,
+        destination: null,
+        sourceName: "",
+        destinationName: ""
+    });
 
-    if (status === "loading") {
-        return <Loading />;
-    }
 
-    if (!session) {
-        return <p>Not logged in</p>;
-    }
 
     const handleVehicleSelect = (vehicleType) => {
         setIsLocationSelectionOpen(true);
     };
 
-    const handleLocationSelect = (source, destination) => {
-        console.log("Selected Locations:", { source, destination });
+    const handleLocationSelect = (source, destination, sourceName, destinationName) => {
+        setSelectedLocations({
+            source,
+            destination,
+            sourceName,
+            destinationName
+        });
         setIsLocationSelectionOpen(false);
+        setIsFindingRider(true);
     };
 
     return (
@@ -41,6 +49,15 @@ const page = () => {
                 isOpen={isLocationSelectionOpen}
                 onClose={() => setIsLocationSelectionOpen(false)}
                 onSelectLocation={handleLocationSelect}
+            />
+
+            <FindingRider
+                isOpen={isFindingRider}
+                sourceCoords={selectedLocations.source}
+                destinationCoords={selectedLocations.destination}
+                sourceName={selectedLocations.sourceName}
+                destinationName={selectedLocations.destinationName}
+                onClose={() => setIsFindingRider(false)}
             />
 
             <div className="">
