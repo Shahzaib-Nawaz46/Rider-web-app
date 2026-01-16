@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 import { Plus, Minus } from "lucide-react"; // Custom icons
 
+
 // Dynamically import MapContainer and other Leaflet components
 const MapContainer = dynamic(
     () => import("react-leaflet").then((mod) => mod.MapContainer),
@@ -28,21 +29,10 @@ const useMap = dynamic(
     { ssr: false }
 );
 
-// Inner component to handle zoom logic because styling needs access to map context
-// However, since we are dynamically importing useMap, we might face issues if we try to use it directly in the main component body before it's loaded.
-// A safer pattern with Next.js dynamic imports for libraries like this is ensuring the child component is also dynamic or checking availability.
-// Actually, `useMap` returns a hook. We need a component that calls this hook.
-// Let's create a standard component but we need to ensure react-leaflet is loaded.
-// The easiest way with dynamic imports is to define this "ZoomController" inside the dynamic block or importa it from a file.
-// But to keep it single-file, we can use a trick: pass the map instance or just assume this component renders inside MapContainer which is dynamic.
 
 const ZoomController = () => {
-    // We need to import useMap inside here or ensure it's available. 
-    // Since 'dynamic' returns a component, we can't use it as a hook directly.
-    // We have to import the hook from the module.
-    // Let's accept that we might need to modify how we import things slightly.
-    // Standard pattern:
-    const { useMap } = require('react-leaflet');
+   const { useMap } = require('react-leaflet');
+    
     const map = useMap();
 
     return (
@@ -77,11 +67,55 @@ const CustomZoomControl = () => {
 };
 
 
+const MapEvents = ({ onMapClick }) => {
+    const { useMapEvents } = require('react-leaflet');
+    useMapEvents({
+        click(e) {
+            if (onMapClick) onMapClick(e.latlng);            
+        },
+    });
+    return null;
+};
+
+const CustomMapEvents = ({ onMapClick }) => {
+    try {
+        return <MapEvents onMapClick={onMapClick} />;
+    } catch (e) {
+        return null;
+    }
+};
+
+// Component to handle map view updates
+const MapViewController = ({ center, zoom }) => {
+       const { useMap } = require('react-leaflet');
+
+
+    const map = useMap();
+
+    useEffect(() => {
+        if (center && map) {
+            map.setView(center, zoom);
+        }
+    }, [center, zoom, map]);
+
+    return null;
+};
+
+const CustomMapViewController = ({ center, zoom }) => {
+    try {
+        return <MapViewController center={center} zoom={zoom} />;
+    } catch (e) {
+        return null;
+    }
+};
+
 const MapComponent = ({
     center = [51.505, -0.09],
     zoom = 13,
     className = "w-full h-full",
     style = { height: "100%", width: "100%" },
+    onMapClick,
+    markerPosition
 }) => {
     const [isMounted, setIsMounted] = useState(false);
 
@@ -108,27 +142,29 @@ const MapComponent = ({
         );
     }
 
+    const displayMarkerPosition = markerPosition || center;
+
     return (
         <div className={className} style={style}>
             <MapContainer
                 center={center}
                 zoom={zoom}
-                zoomControl={false} // Disable default zoom control
+                zoomControl={false}
                 style={{ height: "100%", width: "100%" }}
                 className="z-0"
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Marker position={center}>
-                    <Popup>
-                        You are here.
-                    </Popup>
+                <Marker position={displayMarkerPosition}>
+                   
                 </Marker>
 
                 {/* Render Custom Controls */}
                 <CustomZoomControl />
+                <CustomMapEvents onMapClick={onMapClick} />
+                <CustomMapViewController center={center} zoom={zoom} />
 
             </MapContainer>
         </div>

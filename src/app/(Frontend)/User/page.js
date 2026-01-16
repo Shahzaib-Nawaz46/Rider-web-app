@@ -1,5 +1,6 @@
 "use client"
-import React from "react";
+import React, { useState } from "react";
+import LocationSelector from "@/app/(Frontend)/components/LocationSelector";
 import { useSession } from "next-auth/react";
 import Image from "next/image"
 import { CiSearch } from "react-icons/ci";
@@ -14,19 +15,34 @@ import Footer from '@/app/(Frontend)/components/user-footer';
 import RecentRides from "@/app/(Frontend)/User/RecentRides/page";
 import Loading from "@/app/loading";
 const page = () => {
-      const { data: session, status } = useSession();
+    const { data: session, status } = useSession();
+    const [isLocationSelectionOpen, setIsLocationSelectionOpen] = useState(false);
 
-  if (status === "loading") {
-    return <Loading />;
-  }
+    if (status === "loading") {
+        return <Loading />;
+    }
 
-  if (!session) {
-    return <p>Not logged in</p>;
-  }
+    if (!session) {
+        return <p>Not logged in</p>;
+    }
 
-  console.log(session.user.firstName);
+    const handleVehicleSelect = (vehicleType) => {
+        setIsLocationSelectionOpen(true);
+    };
+
+    const handleLocationSelect = (source, destination) => {
+        console.log("Selected Locations:", { source, destination });
+        setIsLocationSelectionOpen(false);
+    };
+
     return (
         <>
+            <LocationSelector
+                isOpen={isLocationSelectionOpen}
+                onClose={() => setIsLocationSelectionOpen(false)}
+                onSelectLocation={handleLocationSelect}
+            />
+
             <div className="">
                 <div className="bg-[#1A1A1A] h-75">
                     <div className="flex justify-between p-5"> {/* For Top section*/}
@@ -44,9 +60,6 @@ const page = () => {
                                 className="rounded-full"
                             />
                         </div>
-
-
-
 
                     </div>
                     {/* search bar */}
@@ -100,7 +113,7 @@ const page = () => {
                 <div className=" bg-[#1A1A1A]">
                     <div className=" h-10">
 
-                        <Vehicles />
+                        <Vehicles onSelect={handleVehicleSelect} />
                     </div>
 
                 </div>
