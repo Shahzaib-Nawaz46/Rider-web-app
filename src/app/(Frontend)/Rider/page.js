@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import MapComponent from "../components/MapComponent";
 import RiderFooter from "../components/RiderFooter";
+import RideCard from "../components/RideCard";
 import { Search, User, Menu } from "lucide-react"; // Added icons
 
 export default function RiderPage() {
@@ -13,29 +14,55 @@ export default function RiderPage() {
   const [rides, setRides] = useState([]);
   const [currentRide, setCurrentRide] = useState(null); // Track active ride
 
-  // Poll for rides when Online & No active ride
+  // Poll for rides AND active status when Online
   useEffect(() => {
     let interval;
-    if (isOnline && !currentRide) {
-      const fetchRides = async () => {
+    if (isOnline) {
+      const fetchRidesAndStatus = async () => {
         try {
-          const res = await fetch('/api/rides/available');
-          if (res.ok) {
-            const data = await res.json();
-            setRides(data);
+          // 1. Fetch Available Rides (if no current ride)
+          if (!currentRide) {
+            const res = await fetch('/api/rides/available');
+            if (res.ok) {
+              const data = await res.json();
+              setRides(data);
+            }
           }
+
+          // 2. Check if *I* have an active ride (User might have accepted my offer)
+          // We only need to check this if we don't think we have one, or to confirm validity
+          const myId = session?.user?.id;
+          if (myId) {
+            const activeRes = await fetch('/api/rides/rider/active', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ riderId: myId })
+            });
+
+            if (activeRes.ok) {
+              const { activeRide } = await activeRes.json();
+              if (activeRide) {
+                setCurrentRide(activeRide); // Auto-switch to "Ride Started"
+              } else if (currentRide) {
+                // If API says no active ride, but we have one locally, maybe it was cancelled?
+                // For now, let's not auto-clear to avoid flickering, unless we handle cancellation explicitely
+                // setCurrentRide(null); 
+              }
+            }
+          }
+
         } catch (error) {
-          console.error("Error fetching rides:", error);
+          console.error("Error fetching rides/status:", error);
         }
       };
 
-      fetchRides(); // Initial fetch
-      interval = setInterval(fetchRides, 3000); // 3s polling
+      fetchRidesAndStatus(); // Initial fetch
+      interval = setInterval(fetchRidesAndStatus, 3000); // 3s polling
     } else {
-      if (!currentRide) setRides([]); // Clear rides when offline only if no active ride
+      if (!currentRide) setRides([]);
     }
     return () => clearInterval(interval);
-  }, [isOnline, currentRide]);
+  }, [isOnline, currentRide, session]);
 
   const toggleOnlineStatus = () => {
     setIsOnline(!isOnline);
@@ -72,6 +99,30 @@ export default function RiderPage() {
       console.error("Accept error:", error);
     }
   };
+  const handleSendOffer = async (rideId, amount) => {
+    try {
+      const res = await fetch('/api/rides/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rideId,
+          riderId: session?.user?.id || 999, // Fallback
+          amount
+        })
+      });
+
+      if (res.ok) {
+        alert("Offer Sent! Waiting for user to accept...");
+        // Optionally remove the ride from list to avoid duplicate offers?
+        // Or just show "Offer Sent" badge (not implemented yet).
+      } else {
+        console.error("Failed to send offer");
+        alert("Error sending offer");
+      }
+    } catch (error) {
+      console.error("Offer error:", error);
+    }
+  };
 
   // Filter rides
   const availableActiveRides = rides.filter(r => r.seconds_elapsed <= 20);
@@ -98,8 +149,23 @@ export default function RiderPage() {
                 </div>
               </div>
               <button
-                onClick={() => setCurrentRide(null)}
-                className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/rides/complete', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ rideId: currentRide.id })
+                    });
+                    if (res.ok) {
+                      setCurrentRide(null);
+                    } else {
+                      alert("Error completing ride");
+                    }
+                  } catch (err) {
+                    console.error("Complete error", err);
+                  }
+                }}
+                className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-colors"
               >
                 Complete Ride
               </button>
@@ -217,61 +283,36 @@ export default function RiderPage() {
               {activeTab === "active" ? (
                 availableActiveRides.length > 0 ? (
                   availableActiveRides.map((ride) => (
-                    <div key={ride.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center active:scale-[0.99] transition-transform">
-                      <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <p className="font-semibold text-gray-900">{ride.pickup_name || `Lat: ${ride.pickup_lat}`}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                          <p className="font-semibold text-gray-900">{ride.drop_name || `Lat: ${ride.drop_lat}`}</p>
-                        </div>
-                        <p className="text-xs text-blue-600 mt-2 font-medium bg-blue-50 inline-block px-2 py-1 rounded-md">
-                          {ride.seconds_elapsed}s ago
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">${ride.price}</p>
-                        <button
-                          onClick={() => handleAcceptRide(ride.id)}
-                          className="mt-2 bg-black text-white text-xs px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors"
-                        >
-                          Accept
-                        </button>
-                      </div>
-                    </div>
+                    <RideCard
+                      key={ride.id}
+                      ride={ride}
+                      onAccept={handleAcceptRide}
+                      onOffer={handleSendOffer}
+                    />
                   ))
                 ) : (
-                  <div className="text-center py-10 text-gray-400">
-                    <p>No active rides currently.</p>
+                  <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <Search className="w-8 h-8 text-gray-300" />
+                    </div>
+                    <p className="font-medium">No active rides currently.</p>
+                    <p className="text-sm">Stay online to receive requests.</p>
                   </div>
                 )
               ) : (
                 // Missed Rides Content
                 availableMissedRides.length > 0 ? (
                   availableMissedRides.map((ride) => (
-                    <div key={ride.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 opacity-75">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-gray-800">Ride Request</h3>
-                        <span className="text-xs text-gray-400">{ride.seconds_elapsed}s ago</span>
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        From <span className="font-medium text-gray-900">{ride.pickup_name || ride.pickup_lat}</span> to <span className="font-medium text-gray-900">{ride.drop_name || ride.drop_lat}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-red-500 text-xs font-medium">Missed request</span>
-                        <button
-                          onClick={() => handleAcceptRide(ride.id)}
-                          className="bg-red-50 text-red-600 border border-red-100 text-xs px-3 py-1 rounded-lg font-medium hover:bg-red-100 transition-colors"
-                        >
-                          Recover & Accept
-                        </button>
-                      </div>
+                    <div key={ride.id} className="opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+                      <RideCard
+                        ride={ride}
+                        onAccept={handleAcceptRide}
+                        onOffer={handleSendOffer}
+                      />
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-10 text-gray-400">
+                  <div className="text-center py-20 text-gray-400">
                     <p>No missed rides.</p>
                   </div>
                 )
