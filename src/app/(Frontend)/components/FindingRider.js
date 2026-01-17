@@ -3,8 +3,9 @@ import React, { useState, useEffect } from "react";
 import MapComponent from "@/app/(Frontend)/components/MapComponent";
 import { Loader2 } from "lucide-react";
 
-const FindingRider = ({ isOpen, sourceCoords, destinationCoords, sourceName, destinationName, onClose }) => {
+const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceName, destinationName, onClose }) => {
     const [dots, setDots] = useState("");
+    const [status, setStatus] = useState("PENDING");
 
     // Animated dots effect
     useEffect(() => {
@@ -14,6 +15,32 @@ const FindingRider = ({ isOpen, sourceCoords, destinationCoords, sourceName, des
 
         return () => clearInterval(interval);
     }, []);
+
+    // Polling for ride status
+    useEffect(() => {
+        if (!isOpen || !rideId) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/rides/status/${rideId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setStatus(data.status);
+
+                    if (data.status === 'ACCEPTED') {
+                        // Handle success - maybe redirect or show "Rider Found"
+                        clearInterval(pollInterval);
+                        // alert("Rider Found! Redirecting..."); // REMOVED ALERT
+                        // Here you would typically navigate to a "Ride In Progress" page
+                    }
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+            }
+        }, 3000); // Check every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [isOpen, rideId]);
 
     if (!isOpen) return null;
 
@@ -60,10 +87,12 @@ const FindingRider = ({ isOpen, sourceCoords, destinationCoords, sourceName, des
                     {/* Text */}
                     <div className="text-center">
                         <h2 className="text-2xl font-bold text-gray-800">
-                            Finding Rider for you{dots}
+                            {status === 'ACCEPTED' ? "Ride Started!" : `Finding Rider for you${dots}`}
                         </h2>
                         <p className="text-gray-500 mt-2">
-                            Please wait while we connect you with a nearby rider
+                            {status === 'ACCEPTED'
+                                ? "Your driver is on the way."
+                                : "Please wait while we connect you with a nearby rider"}
                         </p>
                     </div>
 

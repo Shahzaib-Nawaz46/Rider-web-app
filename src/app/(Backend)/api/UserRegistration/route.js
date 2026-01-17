@@ -29,7 +29,7 @@ export async function POST(request) {
       [phoneNumber, hashedPassword, policyAccepted, FirstName, LastName]
     );
 
-    await conn.end();
+    // conn.end() removed
 
     return Response.json(
       {

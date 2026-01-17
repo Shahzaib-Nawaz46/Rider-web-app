@@ -28,11 +28,13 @@ const page = () => {
 
 
 
+    const [rideId, setRideId] = useState(null);
+
     const handleVehicleSelect = (vehicleType) => {
         setIsLocationSelectionOpen(true);
     };
 
-    const handleLocationSelect = (source, destination, sourceName, destinationName) => {
+    const handleLocationSelect = async (source, destination, sourceName, destinationName) => {
         setSelectedLocations({
             source,
             destination,
@@ -41,6 +43,30 @@ const page = () => {
         });
         setIsLocationSelectionOpen(false);
         setIsFindingRider(true);
+
+        try {
+            const response = await fetch('/api/rides/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: session?.user?.id || 1, // Fallback for testing if no session
+                    pickupLat: source.lat,
+                    pickupLng: source.lng,
+                    pickupName: sourceName,
+                    dropLat: destination.lat,
+                    dropLng: destination.lng,
+                    dropName: destinationName,
+                    price: 25.00 // Mock price for now
+                })
+            });
+            const data = await response.json();
+            if (data.rideId) {
+                setRideId(data.rideId);
+            }
+        } catch (error) {
+            console.error("Error creating ride:", error);
+            // Optionally close modal or show error
+        }
     };
 
     return (
@@ -53,11 +79,15 @@ const page = () => {
 
             <FindingRider
                 isOpen={isFindingRider}
+                rideId={rideId}
                 sourceCoords={selectedLocations.source}
                 destinationCoords={selectedLocations.destination}
                 sourceName={selectedLocations.sourceName}
                 destinationName={selectedLocations.destinationName}
-                onClose={() => setIsFindingRider(false)}
+                onClose={() => {
+                    setIsFindingRider(false);
+                    setRideId(null);
+                }}
             />
 
             {!isLocationSelectionOpen && !isFindingRider && (

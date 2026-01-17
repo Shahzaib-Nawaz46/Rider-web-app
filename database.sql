@@ -28,3 +28,19 @@ CREATE TABLE IF NOT EXISTS riders (
     vehicleType ENUM('comfort', 'mini', 'rickshaw', 'bike') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS rides (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    rider_id INT DEFAULT NULL,
+    pickup_lat DECIMAL(10, 8) NOT NULL,
+    pickup_lng DECIMAL(11, 8) NOT NULL,
+    pickup_name VARCHAR(255),
+    drop_lat DECIMAL(10, 8) NOT NULL,
+    drop_lng DECIMAL(11, 8) NOT NULL,
+    drop_name VARCHAR(255),
+    status ENUM('PENDING', 'ACCEPTED', 'COMPLETED', 'CANCELLED', 'EXPIRED') DEFAULT 'PENDING',
+    price DECIMAL(10, 2),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

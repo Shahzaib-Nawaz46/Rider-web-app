@@ -18,7 +18,7 @@ export async function POST(request) {
             [phoneNumber]
         );
 
-        await conn.end();
+        // conn.end() removed
 
         return Response.json(
             { exists: rows.length > 0 },

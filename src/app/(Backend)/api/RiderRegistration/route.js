@@ -33,7 +33,7 @@ export async function POST(request) {
         );
 
         if (existing.length > 0) {
-            await conn.end();
+            // conn.end() removed
             return Response.json(
                 { error: "Rider with this phone number already exists" },
                 { status: 409 }
@@ -45,7 +45,7 @@ export async function POST(request) {
             [phoneNumber, hashedPassword, FirstName, LastName, vehicleType]
         );
 
-        await conn.end();
+        // conn.end() removed
 
         return Response.json(
             {
