@@ -7,7 +7,8 @@ export async function POST(request) {
             userId,
             pickupLat, pickupLng, pickupName,
             dropLat, dropLng, dropName,
-            price
+            price,
+            vehicleType
         } = body;
 
         // Basic validation
@@ -21,10 +22,10 @@ export async function POST(request) {
         const conn = await connectToDatabase();
 
         const [result] = await conn.execute(
-            `INSERT INTO rides 
-      (user_id, pickup_lat, pickup_lng, pickup_name, drop_lat, drop_lng, drop_name, price, status, created_at) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW())`,
-            [userId, pickupLat, pickupLng, pickupName, dropLat, dropLng, dropName, price]
+            `INSERT INTO rides
+      (user_id, pickup_lat, pickup_lng, pickup_name, drop_lat, drop_lng, drop_name, price, vehicle_type, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW())`,
+            [userId, pickupLat, pickupLng, pickupName, dropLat, dropLng, dropName, price, vehicleType || 'Standard']
         );
 
         // conn.end() removed as we are using a pool

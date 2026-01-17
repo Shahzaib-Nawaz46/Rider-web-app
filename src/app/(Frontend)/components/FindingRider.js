@@ -29,13 +29,26 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                     const statusData = await statusRes.json();
                     setStatus(statusData.status);
 
-                    if (statusData.status === 'ACCEPTED') {
+                    if (statusData.status === 'COMPLETED') {
+                        setStatus('COMPLETED');
                         clearInterval(pollInterval);
-                        return; // Stop polling if accepted
+                        return;
+                    }
+
+                    if (statusData.status === 'ACCEPTED') {
+                        // Keep polling to check for completion
+                        // But we don't need to fetch offers anymore
                     }
                 }
 
                 // 2. Check Offers (Only if pending)
+                if (status === 'PENDING') {
+                    const offersRes = await fetch(`/api/rides/offers/${rideId}`);
+                    if (offersRes.ok) {
+                        const offersData = await offersRes.json();
+                        setOffers(offersData);
+                    }
+                }
                 const offersRes = await fetch(`/api/rides/offers/${rideId}`);
                 if (offersRes.ok) {
                     const offersData = await offersRes.json();
@@ -108,12 +121,26 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-20 max-h-[60vh] overflow-hidden flex flex-col">
 
                 {status === 'ACCEPTED' ? (
-                    <div className="p-8 text-center">
+                    <div className="p-8 text-center animate-in fade-in zoom-in duration-500">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <div className="w-8 h-8 bg-green-500 rounded-full animate-ping"></div>
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800">Ride Started!</h2>
                         <p className="text-gray-500 mt-2">Your driver is on the way.</p>
+                    </div>
+                ) : status === 'COMPLETED' ? (
+                    <div className="p-8 text-center animate-in fade-in zoom-in duration-500">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">Ride Completed!</h2>
+                        <p className="text-gray-500 mt-2">Thank you for riding with us.</p>
+                        <button
+                            onClick={onClose}
+                            className="mt-6 bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-lg"
+                        >
+                            Close
+                        </button>
                     </div>
                 ) : (
                     <>

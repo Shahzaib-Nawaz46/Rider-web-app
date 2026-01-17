@@ -22,7 +22,7 @@ export default function RiderPage() {
         try {
           // 1. Fetch Available Rides (if no current ride)
           if (!currentRide) {
-            const res = await fetch('/api/rides/available');
+            const res = await fetch(`/api/rides/available?riderId=${session?.user?.id}`);
             if (res.ok) {
               const data = await res.json();
               setRides(data);

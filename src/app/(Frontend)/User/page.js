@@ -31,6 +31,7 @@ const page = () => {
     const [rideId, setRideId] = useState(null);
 
     const handleVehicleSelect = (vehicleType) => {
+        setSelectedLocations(prev => ({ ...prev, vehicleType }));
         setIsLocationSelectionOpen(true);
     };
 
@@ -56,7 +57,9 @@ const page = () => {
                     dropLat: destination.lat,
                     dropLng: destination.lng,
                     dropName: destinationName,
-                    price: 25.00 // Mock price for now
+                    dropName: destinationName,
+                    price: 25.00, // Mock price
+                    vehicleType: selectedLocations.vehicleType // Assuming this comes from Vehicle component or state
                 })
             });
             const data = await response.json();
