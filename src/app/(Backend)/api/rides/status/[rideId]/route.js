@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
         const conn = await connectToDatabase();
 
         const [rows] = await conn.execute(
-            "SELECT status, rider_id FROM rides WHERE id = ?",
+            "SELECT status, rider_id, price, expires_at, created_at FROM rides WHERE id = ?",
             [rideId]
         );
 

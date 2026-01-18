@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
         // Fetch offers along with rider details
         const [rows] = await conn.execute(
             `SELECT 
-                ro.id, ro.amount, ro.status, 
+                ro.id, ro.amount, ro.status, ro.counter_by, ro.rider_id,
                 r.FirstName, r.LastName, r.vehicleType, r.phoneNumber
              FROM ride_offers ro
              JOIN riders r ON ro.rider_id = r.id

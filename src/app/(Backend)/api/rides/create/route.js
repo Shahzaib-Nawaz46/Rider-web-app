@@ -23,8 +23,8 @@ export async function POST(request) {
 
         const [result] = await conn.execute(
             `INSERT INTO rides
-      (user_id, pickup_lat, pickup_lng, pickup_name, drop_lat, drop_lng, drop_name, price, vehicle_type, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW())`,
+      (user_id, pickup_lat, pickup_lng, pickup_name, drop_lat, drop_lng, drop_name, price, vehicle_type, status, created_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', NOW(), DATE_ADD(NOW(), INTERVAL 120 SECOND))`,
             [userId, pickupLat, pickupLng, pickupName, dropLat, dropLng, dropName, price, vehicleType || 'Standard']
         );
 

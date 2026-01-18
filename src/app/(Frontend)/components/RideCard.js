@@ -9,11 +9,22 @@ import { MapPin, Navigation, DollarSign, Clock } from "lucide-react";
 const RideCard = ({ ride, onAccept, onOffer }) => {
     const [isOffering, setIsOffering] = useState(false);
     const [offerPrice, setOfferPrice] = useState(ride.price);
+    const [offerSent, setOfferSent] = useState(false);
 
     const handleOfferSubmit = () => {
         onOffer(ride.id, offerPrice);
         setIsOffering(false);
+        setOfferSent(true);
     };
+
+    const handleQuickOffer = (price) => {
+        onOffer(ride.id, price);
+        setOfferSent(true);
+    };
+
+    // Check if rider already sent an offer for this ride
+    const hasMyOffer = ride.my_offer_amount !== null && ride.my_offer_amount !== undefined;
+    const showOfferSent = offerSent || hasMyOffer;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4 transition-all hover:shadow-md">
@@ -27,6 +38,11 @@ const RideCard = ({ ride, onAccept, onOffer }) => {
                 </div>
                 <div className="text-right">
                     <p className="text-xl font-bold text-gray-900">${ride.price}</p>
+                    {showOfferSent && (
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                            {ride.counter_by === 'user' ? 'User Countered' : 'Offer Sent'}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -91,20 +107,67 @@ const RideCard = ({ ride, onAccept, onOffer }) => {
                         </button>
                     </div>
                 </div>
+            ) : showOfferSent ? (
+                ride.counter_by === 'user' ? (
+                    // User has countered - Rider can Accept or Counter back
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                        <p className="text-green-700 font-semibold text-center mb-3">
+                            User countered with ${ride.my_offer_amount}
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsOffering(true)}
+                                className="flex-1 py-3 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                            >
+                                Counter Again
+                            </button>
+                            <button
+                                onClick={() => onAccept(ride.id)}
+                                className="flex-[2] py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-lg"
+                            >
+                                Accept ${ride.my_offer_amount}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    // Rider sent offer, waiting for user
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                        <p className="text-blue-700 font-semibold">
+                            Your offer of ${ride.my_offer_amount || offerPrice} has been sent
+                        </p>
+                        <p className="text-blue-600 text-sm mt-1">Waiting for user response...</p>
+                    </div>
+                )
             ) : (
-                <div className="flex space-x-2">
-                    <button
-                        onClick={() => setIsOffering(true)}
-                        className="flex-1 py-3 bg-white border-2 border-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                        Counter ($)
-                    </button>
-                    <button
-                        onClick={() => onAccept(ride.id)}
-                        className="flex-[2] py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
-                    >
-                        Accept Now
-                    </button>
+                <div className="flex flex-col space-y-3">
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                        {[Number(ride.price) - 5, Number(ride.price) + 5, Number(ride.price) + 10, Number(ride.price) + 15]
+                            .filter(p => p > 0)
+                            .map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => handleQuickOffer(p)}
+                                    className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-sm font-medium hover:bg-black hover:text-white transition-colors whitespace-nowrap"
+                                >
+                                    ${p.toFixed(2)}
+                                </button>
+                            ))}
+                    </div>
+
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => setIsOffering(true)}
+                            className="flex-1 py-3 bg-white border-2 border-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                        >
+                            Custom ($)
+                        </button>
+                        <button
+                            onClick={() => onAccept(ride.id)}
+                            className="flex-[2] py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200"
+                        >
+                            Accept Now
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

@@ -26,20 +26,27 @@ export async function GET(request) {
         const url = new URL(request.url);
         const riderId = url.searchParams.get('riderId');
 
-        let query = `SELECT *, 
-       TIMESTAMPDIFF(SECOND, created_at, NOW()) as seconds_elapsed 
-       FROM rides 
-       WHERE status = 'PENDING' 
-       AND created_at > NOW() - INTERVAL 60 SECOND`;
+        let query = `
+        SELECT r.*, 
+               TIMESTAMPDIFF(SECOND, r.created_at, NOW()) as seconds_elapsed,
+               TIMESTAMPDIFF(SECOND, NOW(), r.expires_at) as seconds_left,
+               ro.amount as my_offer_amount,
+               ro.status as my_offer_status,
+               ro.counter_by,
+               ro.id as offer_id
+        FROM rides r
+        LEFT JOIN ride_offers ro ON r.id = ro.ride_id AND ro.rider_id = ?
+        WHERE r.status = 'PENDING' 
+        AND r.created_at > NOW() - INTERVAL 180 SECOND`;
 
-        const params = [];
+        const params = [riderId || 0]; // If riderId is null, use 0 (safer for join)
 
         if (riderId) {
-            query += ` AND (vehicle_type IS NULL OR vehicle_type = (SELECT vehicleType FROM riders WHERE id = ?))`;
+            query += ` AND (r.vehicle_type IS NULL OR r.vehicle_type = (SELECT vehicleType FROM riders WHERE id = ?))`;
             params.push(riderId);
         }
 
-        query += ` ORDER BY created_at DESC`;
+        query += ` ORDER BY r.created_at DESC`;
 
         const [rows] = await conn.execute(query, params);
 

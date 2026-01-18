@@ -100,6 +100,7 @@ export default function RiderPage() {
     }
   };
   const handleSendOffer = async (rideId, amount) => {
+    console.log("Sending offer:", { rideId, amount, sessionUser: session?.user });
     try {
       const res = await fetch('/api/rides/offer', {
         method: 'POST',
@@ -112,12 +113,13 @@ export default function RiderPage() {
       });
 
       if (res.ok) {
-        alert("Offer Sent! Waiting for user to accept...");
+        // Offer sent successfully - UI will show inline feedback
         // Optionally remove the ride from list to avoid duplicate offers?
         // Or just show "Offer Sent" badge (not implemented yet).
       } else {
-        console.error("Failed to send offer");
-        alert("Error sending offer");
+        const errorData = await res.json();
+        console.error("Failed to send offer:", errorData);
+        alert(`Error sending offer: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Offer error:", error);
@@ -125,8 +127,9 @@ export default function RiderPage() {
   };
 
   // Filter rides
-  const availableActiveRides = rides.filter(r => r.seconds_elapsed <= 20);
-  const availableMissedRides = rides.filter(r => r.seconds_elapsed > 20);
+  // Filter rides based on server-calculated expiry
+  const availableActiveRides = rides.filter(r => r.seconds_left > 0);
+  const availableMissedRides = rides.filter(r => r.seconds_left <= 0);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden relative">
