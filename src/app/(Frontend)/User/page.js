@@ -35,41 +35,103 @@ const page = () => {
         setIsLocationSelectionOpen(true);
     };
 
-    const handleLocationSelect = async (source, destination, sourceName, destinationName) => {
-        setSelectedLocations({
-            source,
-            destination,
-            sourceName,
-            destinationName
-        });
-        setIsLocationSelectionOpen(false);
-        setIsFindingRider(true);
-
+    const createRideRequest = async (source, destination, sourceName, destinationName, vehicleType) => {
         try {
+            console.log("Creating ride request...", { source, destination, vehicleType });
             const response = await fetch('/api/rides/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: session?.user?.id || 1, // Fallback for testing if no session
+                    userId: session?.user?.id || 1,
                     pickupLat: source.lat,
                     pickupLng: source.lng,
                     pickupName: sourceName,
                     dropLat: destination.lat,
                     dropLng: destination.lng,
                     dropName: destinationName,
-                    dropName: destinationName,
                     price: 25.00, // Mock price
-                    vehicleType: selectedLocations.vehicleType // Assuming this comes from Vehicle component or state
+                    vehicleType: vehicleType || 'Standard' // Ensure vehicleType is never undefined
                 })
             });
             const data = await response.json();
-            if (data.rideId) {
-                setRideId(data.rideId);
+            console.log("Ride creation response:", data);
+
+            if (response.ok && data.rideId) {
+                return data.rideId;
+            } else {
+                console.error("Ride creation failed:", data);
+                alert("Failed to create ride. Please try again.");
+                return null;
             }
         } catch (error) {
             console.error("Error creating ride:", error);
-            // Optionally close modal or show error
+            alert("An error occurred. Please try again.");
+            return null;
         }
+    };
+
+    const handleLocationSelect = async (source, destination, sourceName, destinationName) => {
+        setSelectedLocations(prev => ({
+            ...prev,
+            source,
+            destination,
+            sourceName,
+            destinationName
+        }));
+        setIsLocationSelectionOpen(false);
+        setIsFindingRider(true);
+
+        // Use the vehicleType from state (it might not be updated in 'selectedLocations' immediately due to closure, 
+        // so we trust it was set before or use the prev value if we could access it, 
+        // but here we can just rely on the fact we haven't lost it if we update correctly. 
+        // Actually, inside this function 'selectedLocations' is stale (from render).
+        // BUT, since we are setting state, the NEXT render will have it.
+        // For the IMMEDIATE createRideRequest call, we need the vehicleType.
+        // 'selectedLocations.vehicleType' IS available from the current render scope, 
+        // AS LONG AS WE DIDN'T OVERWRITE IT YET (we haven't, we just called set).
+        // Wait, handleVehicleSelect ran BEFORE this. 
+        // So 'selectedLocations.vehicleType' should be correct in this scope.
+
+        const newRideId = await createRideRequest(source, destination, sourceName, destinationName, selectedLocations.vehicleType);
+        if (newRideId) {
+            setRideId(newRideId);
+        } else {
+            setIsFindingRider(false);
+        }
+    };
+
+    const handleRetry = async (rideDetails) => {
+        console.log("Retrying ride...", rideDetails);
+        // Close the current modal first to reset state
+        setIsFindingRider(false);
+        setRideId(null);
+
+        // Small delay to ensure unmount/remount
+        setTimeout(async () => {
+            setIsFindingRider(true);
+
+            // Ensure we have valid coordinates
+            if (!rideDetails?.source || !rideDetails?.destination) {
+                console.error("Invalid ride details for retry:", rideDetails);
+                alert("Cannot retry: Missing location details.");
+                setIsFindingRider(false);
+                return;
+            }
+
+            const newRideId = await createRideRequest(
+                rideDetails.source,
+                rideDetails.destination,
+                rideDetails.sourceName,
+                rideDetails.destinationName,
+                rideDetails.vehicleType || selectedLocations.vehicleType // Use passed type or fallback to state
+            );
+
+            if (newRideId) {
+                setRideId(newRideId);
+            } else {
+                setIsFindingRider(false);
+            }
+        }, 300);
     };
 
     return (
@@ -87,6 +149,8 @@ const page = () => {
                 destinationCoords={selectedLocations.destination}
                 sourceName={selectedLocations.sourceName}
                 destinationName={selectedLocations.destinationName}
+                vehicleType={selectedLocations.vehicleType}
+                onRetry={handleRetry}
                 onClose={() => {
                     setIsFindingRider(false);
                     setRideId(null);

@@ -4,7 +4,7 @@ import MapComponent from "@/app/(Frontend)/components/MapComponent";
 import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceName, destinationName, onClose }) => {
+const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceName, destinationName, vehicleType, onClose, onRetry }) => {
     const [dots, setDots] = useState("");
     const [status, setStatus] = useState("PENDING");
     const [offers, setOffers] = useState([]);
@@ -13,6 +13,18 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
     const [negotiatingOfferId, setNegotiatingOfferId] = useState(null);
     const [sentCounters, setSentCounters] = useState(new Set());
     const { data: session } = useSession();
+
+    // Reset state when rideId changes or modal opens
+    useEffect(() => {
+        if (rideId) {
+            setStatus("PENDING");
+            setIsExpired(false);
+            setOffers([]);
+            setSentCounters(new Set());
+            setNegotiatingOfferId(null);
+            setCounterPrice("");
+        }
+    }, [rideId, isOpen]);
 
     // Animated dots effect
     useEffect(() => {
@@ -35,20 +47,26 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                     const statusData = await statusRes.json();
                     setStatus(statusData.status);
 
-                    // Check for 2-minute absolute timeout
-                    if (statusData.created_at) {
-                        const created = new Date(statusData.created_at).getTime();
-                        const now = Date.now();
-                        const elapsed = (now - created) / 1000; // seconds
-                        console.log(`Ride elapsed time: ${elapsed.toFixed(0)}s / 120s`);
-                        // 2 minutes = 120,000 ms
-                        if (now - created > 120000 && statusData.status === 'PENDING') {
-                            console.log("Ride EXPIRED! Offers count:", offers.length);
+                    // Check for expiration using server flag or timestamp fallback
+                    if (statusData.status === 'PENDING') {
+                        // Trust server flag first (handles timezones), fallback to client check
+                        if (statusData.is_expired_now === 1) {
+                            console.log("Ride EXPIRED (Server Confirmed). Offers count:", offers.length);
                             setIsExpired(true);
                             clearInterval(pollInterval);
-                            // Check if we have any offers - if yes, rider didn't accept
-                            // The message will be shown based on offers.length in the UI
                             return;
+                        }
+
+                        // Fallback client-side check (optional, but good for immediate UI feedback if polling is slow)
+                        if (statusData.expires_at) {
+                            const expiresAt = new Date(statusData.expires_at).getTime();
+                            const now = Date.now();
+                            if (now > expiresAt) {
+                                console.log("Ride EXPIRED (Client Check).");
+                                setIsExpired(true);
+                                clearInterval(pollInterval);
+                                return;
+                            }
                         }
                     }
 
@@ -206,15 +224,27 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                             <div className="w-8 h-8 bg-red-500 rounded-full"></div>
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800">
-                            {offers.length > 0 ? 'Rider Not Accepted' : 'No Riders Found'}
+                            We cannot find a rider for you
                         </h2>
                         <p className="text-gray-500 mt-2">
-                            {offers.length > 0
-                                ? 'The rider did not accept your ride request in time. Please try again.'
-                                : 'We couldn\'t find a rider nearby. Please try again.'}
+                            Please try again.
                         </p>
                         <button
-                            onClick={onClose}
+                            onClick={() => {
+                                console.log("Try Again clicked. props:", { onRetry, sourceCoords, destinationCoords });
+                                if (onRetry) {
+                                    onRetry({
+                                        source: sourceCoords,
+                                        destination: destinationCoords,
+                                        sourceName,
+                                        destinationName,
+                                        vehicleType
+                                    });
+                                } else {
+                                    console.error("onRetry prop is missing!");
+                                    onClose();
+                                }
+                            }}
                             className="mt-6 bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors shadow-lg"
                         >
                             Try Again

@@ -29,32 +29,13 @@ export async function POST(request) {
         const now = new Date();
         const expiresAt = new Date(ride.expires_at);
 
-        // If Expired, check if it's within the "Missed" window?
-        // Logic: "1 min Active + 1 min Missed".
-        // If "Active" (seconds_left > 0), we extend.
-        // If "Missed" (seconds_left <= 0 but > -60?), do we allow revival?
-        // User said: "if user again wo price counter rider ko bhj sakhta hai actiive ride me"
-        // So ONLY in active ride.
-
-        const createdInfo = new Date(ride.created_at);
-        const diffSeconds = (now - createdInfo) / 1000;
-
-        // Allow negotiation up to 3 minutes (180s)
-        if (diffSeconds > 180) {
-            return Response.json({ error: "Ride active timer expired (3 mins)." }, { status: 400 });
+        // Check if ride has expired (strict 2-minute limit from creation)
+        if (now > expiresAt) {
+            return Response.json({ error: "Ride has expired" }, { status: 400 });
         }
 
-        // 1. Extend the main Ride Timer by + (Total 2 mins from Creation? Or +1 min?)
-        // "60 sec ka time dono k bich barh jaye ga 1 min k bjye 2 min ho jye ga"
-        // So expires_at = created_at + 120s.
-        // NOTE: If we keep negotiating, does it keep extending? "max 2 min" seems implied.
-        // implementation: Set expires_at = created_at + 120s (if not already > that?)
-        await conn.execute(
-            `UPDATE rides 
-             SET expires_at = DATE_ADD(created_at, INTERVAL 120 SECOND)
-             WHERE id = ?`,
-            [rideId]
-        );
+        // Note: We are NOT extending the ride timer
+        // Rides have a strict 2-minute limit from creation
 
         // 2. Update the specific Offer or Create one?
         // If `offerId` is provided (User responding to Rider), update that offer.

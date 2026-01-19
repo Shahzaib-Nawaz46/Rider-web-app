@@ -37,7 +37,8 @@ export async function GET(request) {
         FROM rides r
         LEFT JOIN ride_offers ro ON r.id = ro.ride_id AND ro.rider_id = ?
         WHERE r.status = 'PENDING' 
-        AND r.created_at > NOW() - INTERVAL 180 SECOND`;
+        AND r.expires_at > NOW()
+        AND r.created_at > NOW() - INTERVAL 120 SECOND`;
 
         const params = [riderId || 0]; // If riderId is null, use 0 (safer for join)
 
@@ -50,7 +51,10 @@ export async function GET(request) {
 
         const [rows] = await conn.execute(query, params);
 
-        // conn.end() removed
+        console.log(`[DEBUG] Available Rides: Found ${rows.length} rides for riderId ${riderId}`);
+        if (rows.length > 0) {
+            console.log(`[DEBUG] First ride ID: ${rows[0].id}, Expires in: ${rows[0].seconds_left}`);
+        }
 
         return Response.json(rows, { status: 200 });
 

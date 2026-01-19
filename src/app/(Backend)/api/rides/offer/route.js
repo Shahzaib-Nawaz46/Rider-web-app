@@ -33,20 +33,9 @@ export async function POST(request) {
             );
         }
 
-        // Also EXTEND the ride timer if it's still active.
-        // "if rider ne ne price di ... 60 sec ka time dono k bich barh jaye ga"
-        await conn.execute(
-            `UPDATE rides 
-             SET expires_at = DATE_ADD(created_at, INTERVAL 120 SECOND)
-             WHERE id = ? AND expires_at > NOW()`,
-            // Only extend if NOT expired? 
-            // "active ride me counter bhj diya toh ... barh jaye ga"
-            // Assuming the rider can only send offer on "active" (or missed?) ride.
-            // If missed, does offering revive it? 
-            // "or 1 min miss ride colum me os k bad wo ride khtm" -> Implies finite life.
-            // Let's assume we can only extend ACTIVE rides for now.
-            [rideId]
-        );
+        // Note: We are NOT extending the ride timer anymore
+        // Rides have a strict 2-minute limit from creation
+
 
         return Response.json({ message: "Offer sent successfully" }, { status: 200 });
 
