@@ -14,6 +14,9 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
     const [sentCounters, setSentCounters] = useState(new Set());
     const { data: session } = useSession();
 
+    const [riderId, setRiderId] = useState(null);
+    const [riderLocation, setRiderLocation] = useState(null);
+
     // Reset state when rideId changes or modal opens
     useEffect(() => {
         if (rideId) {
@@ -23,6 +26,8 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
             setSentCounters(new Set());
             setNegotiatingOfferId(null);
             setCounterPrice("");
+            setRiderId(null);
+            setRiderLocation(null);
         }
     }, [rideId, isOpen]);
 
@@ -35,7 +40,7 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
         return () => clearInterval(interval);
     }, []);
 
-    // Polling for ride status AND OFFERS
+    // Polling for ride status AND OFFERS AND LOCATION
     useEffect(() => {
         if (!isOpen || !rideId) return;
 
@@ -47,6 +52,10 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                     const statusData = await statusRes.json();
                     setStatus(statusData.status);
 
+                    if (statusData.rider_id) {
+                        setRiderId(statusData.rider_id);
+                    }
+
                     // Check for expiration using server flag or timestamp fallback
                     if (statusData.status === 'PENDING') {
                         // Trust server flag first (handles timezones), fallback to client check
@@ -57,7 +66,7 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                             return;
                         }
 
-                        // Fallback client-side check (optional, but good for immediate UI feedback if polling is slow)
+                        // Fallback client-side check 
                         if (statusData.expires_at) {
                             const expiresAt = new Date(statusData.expires_at).getTime();
                             const now = Date.now();
@@ -75,14 +84,22 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                         clearInterval(pollInterval);
                         return;
                     }
-
-                    if (statusData.status === 'ACCEPTED') {
-                        // Keep polling to check for completion
-                        // But we don't need to fetch offers anymore
-                    }
                 }
 
-                // 2. Check Offers (Only if pending)
+                // 2. Poll Rider Location if Accepted/In Progress
+                if ((status === 'ACCEPTED' || status === 'IN_PROGRESS') && riderId) {
+                    try {
+                        const locRes = await fetch(`/api/riders/location?riderId=${riderId}`);
+                        if (locRes.ok) {
+                            const locData = await locRes.json();
+                            if (locData.lat && locData.lng) {
+                                setRiderLocation({ lat: locData.lat, lng: locData.lng });
+                            }
+                        }
+                    } catch (e) { /* ignore location poll errors */ }
+                }
+
+                // 3. Check Offers (Only if pending)
                 if (status === 'PENDING' && !isExpired) {
                     const offersRes = await fetch(`/api/rides/offers/${rideId}`);
                     if (offersRes.ok) {
@@ -108,7 +125,7 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
         }, 3000); // Check every 3 seconds
 
         return () => clearInterval(pollInterval);
-    }, [isOpen, rideId, status, isExpired]);
+    }, [isOpen, rideId, status, isExpired, riderId]);
 
     const handleAcceptOffer = async (riderId, price) => {
         try {
@@ -196,13 +213,59 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
             {/* Content Overlay */}
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-20 max-h-[60vh] overflow-hidden flex flex-col">
 
-                {status === 'ACCEPTED' ? (
-                    <div className="p-8 text-center animate-in fade-in zoom-in duration-500">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <div className="w-8 h-8 bg-green-500 rounded-full animate-ping"></div>
+                {status === 'ACCEPTED' || status === 'IN_PROGRESS' ? (
+                    <div className="flex-1 relative w-full h-full min-h-[85vh] -mt-6">
+                        <MapComponent
+                            center={riderLocation ? [riderLocation.lat, riderLocation.lng] : [sourceCoords.lat, sourceCoords.lng]}
+                            zoom={riderLocation ? 16 : 14}
+                            markerPosition={[sourceCoords.lat, sourceCoords.lng]}
+                            riderLocation={riderLocation}
+                        />
+
+                        {/* Premium Docked Bottom Sheet */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-white p-5 pt-8 rounded-t-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-[400] animate-in slide-in-from-bottom duration-500">
+
+                            {/* Status Header */}
+                            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">Arriving in {Math.floor(Math.random() * 5) + 2} min</h2>
+                                    <p className="text-xs text-gray-500 font-medium tracking-wide">YOUR RIDE IS ON THE WAY</p>
+                                </div>
+                                <div className="bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full animate-pulse tracking-wider">
+                                    ON ROUTE
+                                </div>
+                            </div>
+
+                            {/* Driver & Car Details */}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-xl overflow-hidden border-2 border-white shadow-sm ring-1 ring-gray-100">
+                                    <span role="img" aria-label="driver">👨‍✈️</span>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-gray-900 text-lg">Your Captain</h3>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-gray-700">{vehicleType || "Standard"}</span>
+                                        <span>•</span>
+                                        <span className="font-mono text-gray-900 font-bold bg-yellow-100 px-2 rounded border border-yellow-200">ABC-1234</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <button className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors border border-green-100">
+                                        📞
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <button className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
+                                    <span>🛡️</span> Safety
+                                </button>
+                                <button className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
+                                    <span>📤</span> Share Trip
+                                </button>
+                            </div>
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-800">Ride Started!</h2>
-                        <p className="text-gray-500 mt-2">Your driver is on the way.</p>
                     </div>
                 ) : status === 'COMPLETED' ? (
                     <div className="p-8 text-center animate-in fade-in zoom-in duration-500">
