@@ -18,10 +18,16 @@ export default function RiderPage() {
   const [riderLocation, setRiderLocation] = useState(null);
   const [routePath, setRoutePath] = useState([]); // Array of [lat, lng]
   const [routeInfo, setRouteInfo] = useState(null); // { distance: meters, duration: seconds }
+  const [lastLocationSent, setLastLocationSent] = useState(null);
 
   // 1. Live Location Tracking
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    console.log("Starting location watch...", { riderId: session?.user?.id });
 
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
@@ -31,10 +37,7 @@ export default function RiderPage() {
         // Push location to server (fire and forget to avoid blocking)
         if (session?.user?.id) {
           try {
-            // Throttle this in a real app, but for now we rely on the 3-5s interval of geolocation or just send it.
-            // Browsers often throttle this themselves. 
-            // Let's add a small check to avoid spamming if static? 
-            // Nah, let's just send it.
+            console.log("Sending location update:", { lat: latitude, lng: longitude });
             await fetch('/api/riders/location', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -44,7 +47,12 @@ export default function RiderPage() {
                 lng: longitude
               })
             });
-          } catch (ignore) { }
+            setLastLocationSent(Date.now());
+          } catch (err) {
+            console.error("Failed to send location:", err);
+          }
+        } else {
+          console.warn("Location obtained but no session user ID available yet.");
         }
       },
       (error) => console.error("Location error:", error),
@@ -52,21 +60,18 @@ export default function RiderPage() {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [session]); // Added session to dependencies
 
   // 2. Fetch/Update Route when Ride is Active + Location Updates
   useEffect(() => {
     if (!currentRide || !riderLocation) return;
 
-    // We assume the route is from Rider (Current) -> Destination (Dropoff)
-    // Or initially Rider -> Pickup, but let's simplify to just Dropoff for now or switch based on status.
-    // Ideally: if status 'ACCEPTED' -> Rout to Pickup. If 'IN_PROGRESS' -> Route to Dropoff.
-    // For now, let's route to Dropoff as requested by "distance cal ho k a rha ho".
-    // Actually, usually it's Pickup first.
-    // Let's assume 'ACCEPTED' means going to pickup.
+    // We assume the route is from Rider (Current) -> Destination
+    // If ACCEPTED -> Route to Pickup
+    // If IN_PROGRESS -> Route to Dropoff
 
-    const targetLat = currentRide.drop_lat; // Simplified for demo, usually depends on state
-    const targetLng = currentRide.drop_lng;
+    const targetLat = currentRide.status === 'ACCEPTED' ? currentRide.pickup_lat : currentRide.drop_lat;
+    const targetLng = currentRide.status === 'ACCEPTED' ? currentRide.pickup_lng : currentRide.drop_lng;
 
     const fetchRoute = async () => {
       try {
@@ -235,85 +240,134 @@ export default function RiderPage() {
             <MapComponent
               center={riderLocation ? [riderLocation.lat, riderLocation.lng] : [currentRide.pickup_lat, currentRide.pickup_lng]}
               zoom={riderLocation ? 16 : 14}
-              markerPosition={[currentRide.drop_lat, currentRide.drop_lng]} // Show dropoff as marker
+              markerPosition={
+                currentRide.status === 'ACCEPTED'
+                  ? [currentRide.pickup_lat, currentRide.pickup_lng] // Target: Pickup
+                  : [currentRide.drop_lat, currentRide.drop_lng]     // Target: Dropoff
+              }
               riderLocation={riderLocation}
               routePath={routePath}
             />
 
-            {/* Top Info Bar (Distance/Time) */}
-            {routeInfo && (
-              <div className="absolute top-4 left-4 right-4 bg-black text-white p-4 rounded-xl shadow-lg z-30 flex justify-between items-center animate-in slide-in-from-top-2">
-                <div>
-                  <p className="text-xs text-gray-400 font-medium uppercase">Remaining</p>
-                  <h3 className="text-xl font-bold">{(routeInfo.distance / 1000).toFixed(1)} km</h3>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400 font-medium uppercase">Est. Time</p>
-                  <h3 className="text-xl font-bold text-green-400">{Math.ceil(routeInfo.duration / 60)} min</h3>
-                </div>
+            {/* Top Info Bar (Distance/Time) + DEBUG INFO */}
+            <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 z-30 pointer-events-none">
+              {/* Debug Indicator */}
+              <div className="bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs self-start pointer-events-auto">
+                📍 Loc Sent: {lastLocationSent ? new Date(lastLocationSent).toLocaleTimeString() : 'Waiting...'}
+                {riderLocation && ` (${riderLocation.lat.toFixed(4)}, ${riderLocation.lng.toFixed(4)})`}
               </div>
-            )}
+
+              {routeInfo && (
+                <div className="bg-black text-white p-4 rounded-xl shadow-lg flex justify-between items-center animate-in slide-in-from-top-2 pointer-events-auto">
+                  <div>
+                    <p className="text-xs text-gray-400 font-medium uppercase">Remaining</p>
+                    <h3 className="text-xl font-bold">{(routeInfo.distance / 1000).toFixed(1)} km</h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400 font-medium uppercase">Est. Time</p>
+                    <h3 className="text-xl font-bold text-green-400">{Math.ceil(routeInfo.duration / 60)} min</h3>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* "Ride Started" Bottom Sheet */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white p-4 pb-16 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20">
-              <h2 className="text-xl font-bold mb-3">Ride in Progress</h2>
+            <div className="absolute bottom-0 left-0 right-0 bg-white p-5 pb-24 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20">
+              <h2 className="text-xl font-bold mb-4">
+                {currentRide.status === 'ACCEPTED' ? "Navigating to Pickup" : "Heading to Destination"}
+              </h2>
 
-              {/* Stepper UI for Pickup/Drop - Compact */}
-              <div className="relative pl-8 space-y-3 mb-4">
+              {/* Stepper UI for Pickup/Drop */}
+              <div className="relative pl-8 space-y-6 mb-6">
                 {/* Line */}
                 <div className="absolute left-[11px] top-2 bottom-4 w-0.5 bg-gray-200"></div>
 
-                <div className="relative">
+                <div className={`relative transition-opacity ${currentRide.status === 'IN_PROGRESS' ? 'opacity-50' : 'opacity-100'}`}>
                   <div className="absolute -left-8 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center border border-green-500">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Pickup</p>
-                    <p className="font-semibold text-gray-900 text-sm leading-tight">{currentRide.pickup_name}</p>
+                    <p className="text-xs text-gray-500 uppercase font-bold">Pickup</p>
+                    <p className="font-semibold text-gray-900">{currentRide.pickup_name}</p>
                   </div>
                 </div>
 
-                <div className="relative">
+                <div className={`relative transition-opacity ${currentRide.status === 'ACCEPTED' ? 'opacity-50' : 'opacity-100'}`}>
                   <div className="absolute -left-8 w-6 h-6 bg-red-100 rounded-full flex items-center justify-center border border-red-500">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Dropoff</p>
-                    <p className="font-semibold text-gray-900 text-sm leading-tight">{currentRide.drop_name}</p>
+                    <p className="text-xs text-gray-500 uppercase font-bold">Dropoff</p>
+                    <p className="font-semibold text-gray-900">{currentRide.drop_name}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-2 pb-2">
+              <div className="flex gap-3 mt-4 pb-4">
                 <button
                   onClick={() => {
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${riderLocation?.lat},${riderLocation?.lng}&destination=${currentRide.drop_lat},${currentRide.drop_lng}&travelmode=driving`;
+                    // Navigate to Pickup or Dropoff based on status
+                    const targetLat = currentRide.status === 'ACCEPTED' ? currentRide.pickup_lat : currentRide.drop_lat;
+                    const targetLng = currentRide.status === 'ACCEPTED' ? currentRide.pickup_lng : currentRide.drop_lng;
+                    const url = `https://www.google.com/maps/dir/?api=1&origin=${riderLocation?.lat},${riderLocation?.lng}&destination=${targetLat},${targetLng}&travelmode=driving`;
                     window.open(url, '_blank');
                   }}
-                  className="flex-1 bg-gray-100 text-black py-3 rounded-xl font-bold text-base hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  className="flex-1 bg-gray-100 text-black py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
-                  <Navigation size={18} /> Navigate
+                  <Navigation size={20} /> Navigate
                 </button>
-                <button
-                  onClick={async () => {
-                    if (!confirm("Complete Ride?")) return;
-                    try {
-                      const res = await fetch('/api/rides/complete', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ rideId: currentRide.id })
-                      });
-                      if (res.ok) {
-                        setCurrentRide(null);
-                        setRoutePath([]);
-                        setRouteInfo(null);
+
+                {currentRide.status === 'ACCEPTED' ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/rides/start', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ rideId: currentRide.id })
+                        });
+                        if (res.ok) {
+                          // Update local state to IN_PROGRESS to trigger UI change immediately
+                          setCurrentRide(prev => ({ ...prev, status: 'IN_PROGRESS' }));
+                          // Verify with a fresh route fetch if desired, but state update is faster
+                        } else {
+                          const err = await res.json();
+                          alert(`Error starting ride: ${err.error}${err.details ? ': ' + err.details : ''}`);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                        alert("System error starting ride");
                       }
-                    } catch (err) { console.error(err); }
-                  }}
-                  className="flex-[2] bg-black text-white py-3 rounded-xl font-bold text-base hover:bg-gray-800 transition-colors shadow-lg"
-                >
-                  Complete Ride
-                </button>
+                    }}
+                    className="flex-[2] bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition-colors shadow-lg"
+                  >
+                    Start Ride
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/rides/complete', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ rideId: currentRide.id })
+                        });
+                        if (res.ok) {
+                          setCurrentRide(null);
+                          setRoutePath([]);
+                          setRouteInfo(null);
+                        } else {
+                          alert("Error completing ride");
+                        }
+                      } catch (err) {
+                        console.error("Complete error", err);
+                      }
+                    }}
+                    className="flex-[2] bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 transition-colors shadow-lg"
+                  >
+                    Complete Ride
+                  </button>
+                )}
               </div>
             </div>
           </div>

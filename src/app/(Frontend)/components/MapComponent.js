@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 import { Plus, Minus } from "lucide-react"; // Custom icons
@@ -97,13 +97,28 @@ const RecenterControl = ({ center, zoom }) => {
     const { useMap } = require('react-leaflet');
     const map = useMap();
 
-    // Initial center on mount only
+    // Use a ref to store the previous center to avoid re-triggering on reference change
+    const prevCenter = useRef(center);
+
+    // Initial center on mount AND when center changes
     useEffect(() => {
         if (center && map) {
-            map.setView(center, zoom);
+            const [lat, lng] = center;
+            const [prevLat, prevLng] = prevCenter.current || [0, 0];
+
+            // Only flyTo if coordinates effectively changed (epsilon check for float)
+            // AND ensure we don't spam it.
+            const isDifferent = Math.abs(lat - prevLat) > 0.000001 || Math.abs(lng - prevLng) > 0.000001;
+
+            if (isDifferent) {
+                map.flyTo(center, Math.max(map.getZoom(), 15), {
+                    animate: true,
+                    duration: 1.5 // Smooth 1.5s animation
+                });
+                prevCenter.current = center;
+            }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run ONCE on mount
+    }, [center, map]); // Re-run when center changes!
 
     return (
         <button
@@ -134,10 +149,14 @@ const MapComponent = ({
     onMapClick,
     markerPosition,
     riderLocation, // New prop: { lat, lng }
-    routePath      // New prop: Array of [lat, lng]
+    routePath,      // New prop: Array of [lat, lng]
+    markerType = 'pickup', // 'pickup' | 'dropoff' (default blue)
+    vehicleType = 'car' // 'car' | 'bike' | 'auto'
 }) => {
     const [isMounted, setIsMounted] = useState(false);
-    const [carIcon, setCarIcon] = useState(null);
+    // Remove old carIcon state, use vehicleIcons map
+    const [vehicleIcons, setVehicleIcons] = useState({ car: null, bike: null, auto: null });
+    const [icons, setIcons] = useState({ blue: null, red: null });
 
     useEffect(() => {
         setIsMounted(true);
@@ -153,22 +172,83 @@ const MapComponent = ({
                 shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
             });
 
-            // Create Custom Car Icon using DivIcon + SVG for reliability
+            // Create Custom Icons
+            const blueIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            const redIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            setIcons({ blue: blueIcon, red: redIcon });
+
+            // Create Custom Icons (Car, Bike, Auto)
+            const createVehicleIcon = (svgContent) => {
+                return L.divIcon({
+                    html: svgContent,
+                    className: 'bg-transparent',
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
+                });
+            };
+
             const carSvg = `
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 40px; height: 40px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));">
-                    <path fill="#2563EB" d="M112.5 256c-19.6 0-38.8 3.3-56.9 9.5c-3.2-9.6-5.6-19.6-5.6-31.5c0-10.6 8.6-19.2 19.2-19.2l39 0c51.9 0 95.8-33.8 111.9-80.8L234.3 93.6c4.6-13.4 17.2-22.6 31.4-22.6l103.5 0c15 0 28.2 10.3 32.2 24.9l20.4 73.9c-10 2.2-20.4 3.4-31 3.4l-1.9 0c-10.6 0-19.2 8.6-19.2 19.2l0 6.6c-49.8 1.8-93.5 29.8-115.1 69.8c-15.1 27.2-24.3 58-25.5 90.7l-94.7 0c-15 0-28.2-10.3-32.2-24.9l-20.4-73.9c10-2.2 20.4-3.4 31-3.4l1.9 0c10.6 0 19.2-8.6 19.2-19.2l0-6.6c0-10.6-8.6-19.2-19.2-19.2l-39 0c-10.6 0-19.2 8.6-19.2 19.2c0 11.9 2.5 22 5.6 31.5c18.1-6.1 37.3-9.5 56.9-9.5zM416 288c53 0 96 43 96 96s-43 96-96 96s-96-43-96-96s43-96 96-96z"/>
-                    <circle cx="128" cy="384" r="48" fill="#333" />
-                    <circle cx="384" cy="384" r="48" fill="#333" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 40px; height: 40px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+                    <path fill="#111" d="M112.5 256c-19.6 0-38.8 3.3-56.9 9.5c-3.2-9.6-5.6-19.6-5.6-31.5c0-10.6 8.6-19.2 19.2-19.2l39 0c51.9 0 95.8-33.8 111.9-80.8L234.3 93.6c4.6-13.4 17.2-22.6 31.4-22.6l103.5 0c15 0 28.2 10.3 32.2 24.9l20.4 73.9c-10 2.2-20.4 3.4-31 3.4l-1.9 0c-10.6 0-19.2 8.6-19.2 19.2l0 6.6c-49.8 1.8-93.5 29.8-115.1 69.8c-15.1 27.2-24.3 58-25.5 90.7l-94.7 0c-15 0-28.2-10.3-32.2-24.9l-20.4-73.9c10-2.2 20.4-3.4 31-3.4l1.9 0c10.6 0 19.2-8.6 19.2-19.2l0-6.6c0-10.6-8.6-19.2-19.2-19.2l-39 0c-10.6 0-19.2 8.6-19.2 19.2c0 11.9 2.5 22 5.6 31.5c18.1-6.1 37.3-9.5 56.9-9.5z" />
+                    <rect x="150" y="150" width="120" height="180" rx="20" fill="#2563EB" opacity="0.9"/>
+                    <path d="M416 288c53 0 96 43 96 96s-43 96-96 96s-96-43-96-96s43-96 96-96z" fill="#111"/> 
+                </svg>
+            `;
+            // Simplified Top-Down Car
+            const cleanCarSvg = `
+                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+                    <rect x="25" y="10" width="50" height="80" rx="10" fill="#000000" stroke="white" stroke-width="2"/>
+                    <rect x="28" y="25" width="44" height="20" rx="2" fill="#444"/>
+                    <rect x="28" y="65" width="44" height="15" rx="2" fill="#444"/>
+                    <path d="M25 20 L20 25 L20 35 L25 40" fill="#333"/> 
+                    <path d="M75 20 L80 25 L80 35 L75 40" fill="#333"/>
+                    <path d="M25 70 L20 75 L20 85 L25 90" fill="#333"/>
+                    <path d="M75 70 L80 75 L80 85 L75 90" fill="#333"/>
                 </svg>
             `;
 
-            const car = L.divIcon({
-                html: carSvg,
-                className: 'bg-transparent',
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
+            const bikeSvg = `
+                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+                   <rect x="42" y="15" width="16" height="70" rx="5" fill="#2563EB" stroke="white" stroke-width="2"/>
+                   <rect x="30" y="30" width="40" height="5" fill="#111"/>
+                   <circle cx="50" cy="20" r="6" fill="#FFD700"/>
+                </svg>
+            `;
+
+            const autoSvg = `
+                <svg width="45" height="45" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+                    <path d="M30,20 L70,20 L80,50 L70,85 L30,85 L20,50 Z" fill="#FACC15" stroke="black" stroke-width="2"/>
+                    <rect x="35" y="55" width="30" height="25" fill="#333"/>
+                    <rect x="20" y="50" width="10" height="20" fill="#111"/>
+                    <rect x="70" y="50" width="10" height="20" fill="#111"/>
+                    <rect x="45" y="10" width="10" height="15" fill="#111"/>
+                </svg>
+            `;
+
+            // Nice detailed icons from external source or standard shapes
+            // Using placeholder SVGs above for "VIP" look (Clean, dark/colored with shadows)
+
+            setVehicleIcons({
+                car: createVehicleIcon(cleanCarSvg),
+                bike: createVehicleIcon(bikeSvg),
+                auto: createVehicleIcon(autoSvg)
             });
-            setCarIcon(car);
 
         })();
 
@@ -181,6 +261,19 @@ const MapComponent = ({
             </div>
         );
     }
+
+    // Determine which icon to use for the main marker
+    const mainMarkerIcon = markerType === 'dropoff' ? icons.red : icons.blue;
+
+    const getVehicleIcon = () => {
+        if (!vehicleIcons.car) return null; // Wait for load
+        const type = (vehicleType || 'car').toLowerCase();
+        if (type.includes('bike') || type.includes('moto')) return vehicleIcons.bike;
+        if (type.includes('auto') || type.includes('rickshaw')) return vehicleIcons.auto;
+        return vehicleIcons.car;
+    };
+
+    const activeVehicleIcon = getVehicleIcon();
 
     return (
         <div className={className} style={style}>
@@ -196,18 +289,18 @@ const MapComponent = ({
                 />
 
                 {/* Destination/Pickup Marker */}
-                {markerPosition && <Marker position={markerPosition} />}
+                {markerPosition && mainMarkerIcon && <Marker position={markerPosition} icon={mainMarkerIcon} />}
 
-                {/* Rider Live Location (Car Icon) */}
-                {riderLocation && carIcon && (
+                {/* Rider Live Location (Dynamic Icon) */}
+                {riderLocation && activeVehicleIcon && (
                     <Marker
                         position={[riderLocation.lat, riderLocation.lng]}
-                        icon={carIcon}
+                        icon={activeVehicleIcon}
                         zIndexOffset={100}
                     />
                 )}
                 {/* Fallback if icon not loaded yet */}
-                {riderLocation && !carIcon && (
+                {riderLocation && !activeVehicleIcon && (
                     <CircleMarker
                         center={[riderLocation.lat, riderLocation.lng]}
                         radius={8}

@@ -16,6 +16,37 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
 
     const [riderId, setRiderId] = useState(null);
     const [riderLocation, setRiderLocation] = useState(null);
+    const [riderDetails, setRiderDetails] = useState(null);
+    const [lastLocationReceived, setLastLocationReceived] = useState(null);
+    const [routePath, setRoutePath] = useState([]);
+
+    // Calculate Route based on status (Rider -> Pickup OR Rider -> Dropoff)
+    useEffect(() => {
+        if (!riderLocation || !status) return;
+        if (status !== 'ACCEPTED' && status !== 'IN_PROGRESS') return;
+
+        const targetLat = status === 'ACCEPTED' ? sourceCoords.lat : destinationCoords.lat;
+        const targetLng = status === 'ACCEPTED' ? sourceCoords.lng : destinationCoords.lng;
+
+        const fetchRoute = async () => {
+            try {
+                const response = await fetch(
+                    `https://router.project-osrm.org/route/v1/driving/${riderLocation.lng},${riderLocation.lat};${targetLng},${targetLat}?overview=full&geometries=geojson`
+                );
+                const data = await response.json();
+                if (data.routes && data.routes.length > 0) {
+                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    setRoutePath(coords);
+                }
+            } catch (error) {
+                console.error("Route fetch error:", error);
+            }
+        };
+
+        // Fetch route initially and maybe on significant movement? 
+        // For now, let's just fetch when riderLocation updates (throttled by effect)
+        fetchRoute();
+    }, [riderLocation, status, sourceCoords, destinationCoords]);
 
     // Reset state when rideId changes or modal opens
     useEffect(() => {
@@ -28,6 +59,7 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
             setCounterPrice("");
             setRiderId(null);
             setRiderLocation(null);
+            setRiderDetails(null);
         }
     }, [rideId, isOpen]);
 
@@ -44,38 +76,51 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
     useEffect(() => {
         if (!isOpen || !rideId) return;
 
+        console.log(`Starting poll for Ride ID: ${rideId}`);
+
         const pollInterval = setInterval(async () => {
             try {
                 // 1. Check Status
                 const statusRes = await fetch(`/api/rides/status/${rideId}`);
                 if (statusRes.ok) {
                     const statusData = await statusRes.json();
-                    setStatus(statusData.status);
 
-                    if (statusData.rider_id) {
-                        setRiderId(statusData.rider_id);
+                    // Update Status Check
+                    if (statusData.status !== status) {
+                        console.log(`Status changed: ${status} -> ${statusData.status}`);
+                        setStatus(statusData.status);
                     }
 
-                    // Check for expiration using server flag or timestamp fallback
+                    let currentRiderId = riderId; // Default to state
+
+                    // If rider is assigned, update state and local variable for immediate use
+                    if (statusData.rider_id) {
+                        if (statusData.rider_id !== riderId) {
+                            console.log("Rider found/changed:", statusData.rider_id);
+                            setRiderId(statusData.rider_id);
+                        }
+                        currentRiderId = statusData.rider_id;
+
+                        // Save full rider details if present and not already set
+                        if (statusData.FirstName) {
+                            // Only update if something changed to avoid re-renders? 
+                            // For simplicity, just setting it is fine as React handles equality check on objects poorly but we need the data.
+                            setRiderDetails({
+                                name: `${statusData.FirstName} ${statusData.LastName || ""}`,
+                                phone: statusData.phoneNumber,
+                                vehicle: statusData.vehicleType,
+                                lat: statusData.current_lat,
+                                lng: statusData.current_lng
+                            });
+                        }
+                    }
+
+                    // Check for expiration
                     if (statusData.status === 'PENDING') {
-                        // Trust server flag first (handles timezones), fallback to client check
                         if (statusData.is_expired_now === 1) {
-                            console.log("Ride EXPIRED (Server Confirmed). Offers count:", offers.length);
                             setIsExpired(true);
                             clearInterval(pollInterval);
                             return;
-                        }
-
-                        // Fallback client-side check 
-                        if (statusData.expires_at) {
-                            const expiresAt = new Date(statusData.expires_at).getTime();
-                            const now = Date.now();
-                            if (now > expiresAt) {
-                                console.log("Ride EXPIRED (Client Check).");
-                                setIsExpired(true);
-                                clearInterval(pollInterval);
-                                return;
-                            }
                         }
                     }
 
@@ -84,19 +129,29 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                         clearInterval(pollInterval);
                         return;
                     }
-                }
 
-                // 2. Poll Rider Location if Accepted/In Progress
-                if ((status === 'ACCEPTED' || status === 'IN_PROGRESS') && riderId) {
-                    try {
-                        const locRes = await fetch(`/api/riders/location?riderId=${riderId}`);
-                        if (locRes.ok) {
-                            const locData = await locRes.json();
-                            if (locData.lat && locData.lng) {
-                                setRiderLocation({ lat: locData.lat, lng: locData.lng });
+                    // 2. Poll Rider Location if Accepted/In Progress
+                    // CRITICAL FIX: Use currentRiderId (from this poll cycle), not the stale state 'riderId'
+                    if ((statusData.status === 'ACCEPTED' || statusData.status === 'IN_PROGRESS') && currentRiderId) {
+                        try {
+                            const locRes = await fetch(`/api/riders/location?riderId=${currentRiderId}`);
+                            if (locRes.ok) {
+                                const locData = await locRes.json();
+                                if (locData.lat && locData.lng) {
+                                    const newLat = parseFloat(locData.lat);
+                                    const newLng = parseFloat(locData.lng);
+
+                                    // Only update if valid numbers
+                                    if (!isNaN(newLat) && !isNaN(newLng)) {
+                                        setRiderLocation({ lat: newLat, lng: newLng });
+                                        setLastLocationReceived(Date.now());
+                                    }
+                                }
                             }
+                        } catch (e) {
+                            console.error("Location poll error:", e);
                         }
-                    } catch (e) { /* ignore location poll errors */ }
+                    }
                 }
 
                 // 3. Check Offers (Only if pending)
@@ -106,7 +161,6 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                         const offersData = await offersRes.json();
                         setOffers(offersData);
 
-                        // Clear sentCounters for offers that have been countered back by rider
                         setSentCounters(prev => {
                             const newSet = new Set(prev);
                             offersData.forEach(offer => {
@@ -214,57 +268,60 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
             <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-20 max-h-[60vh] overflow-hidden flex flex-col">
 
                 {status === 'ACCEPTED' || status === 'IN_PROGRESS' ? (
-                    <div className="flex-1 relative w-full h-full min-h-[85vh] -mt-6">
+                    <div className="flex-1 relative w-full h-full min-h-[50vh]">
                         <MapComponent
                             center={riderLocation ? [riderLocation.lat, riderLocation.lng] : [sourceCoords.lat, sourceCoords.lng]}
-                            zoom={riderLocation ? 16 : 14}
-                            markerPosition={[sourceCoords.lat, sourceCoords.lng]}
-                            riderLocation={riderLocation}
+                            zoom={riderLocation ? 15 : 13}
+                            markerPosition={status === 'ACCEPTED' ? [sourceCoords.lat, sourceCoords.lng] : [destinationCoords.lat, destinationCoords.lng]}
+                            riderLocation={riderLocation || (riderDetails ? { lat: riderDetails.lat, lng: riderDetails.lng } : null)}
+                            routePath={routePath}
+                            markerType={status === 'ACCEPTED' ? 'pickup' : 'dropoff'}
+                            vehicleType={riderDetails?.vehicle || vehicleType}
                         />
-
-                        {/* Premium Docked Bottom Sheet */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white p-5 pt-8 rounded-t-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-[400] animate-in slide-in-from-bottom duration-500">
-
-                            {/* Status Header */}
-                            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">Arriving in {Math.floor(Math.random() * 5) + 2} min</h2>
-                                    <p className="text-xs text-gray-500 font-medium tracking-wide">YOUR RIDE IS ON THE WAY</p>
-                                </div>
-                                <div className="bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full animate-pulse tracking-wider">
-                                    ON ROUTE
-                                </div>
-                            </div>
-
-                            {/* Driver & Car Details */}
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-xl overflow-hidden border-2 border-white shadow-sm ring-1 ring-gray-100">
-                                    <span role="img" aria-label="driver">👨‍✈️</span>
+                        <div className="absolute bottom-0 left-0 right-0 bg-white p-6 rounded-t-3xl shadow-lg z-20">
+                            {/* Rider Info Card */}
+                            <div className="flex items-center space-x-4 mb-6">
+                                <div className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden border-2 border-green-500 shadow-md">
+                                    <img
+                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${riderDetails?.name || "Rider"}`}
+                                        alt="Rider"
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-gray-900 text-lg">Your Captain</h3>
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide text-gray-700">{vehicleType || "Standard"}</span>
-                                        <span>•</span>
-                                        <span className="font-mono text-gray-900 font-bold bg-yellow-100 px-2 rounded border border-yellow-200">ABC-1234</span>
+                                    <h2 className="text-xl font-bold text-gray-900">{riderDetails?.name || "Rider Found"}</h2>
+                                    <p className="text-gray-500 text-sm font-medium">{riderDetails?.vehicle || "Vehicle"} • {status === 'IN_PROGRESS' ? 'Heading to Destination' : 'Coming to Pickup'}</p>
+                                    <div className="flex items-center mt-1 space-x-2">
+                                        <span className={`px-2 py-0.5 text-xs font-bold rounded-md ${status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                            {status === 'IN_PROGRESS' ? 'RIDE STARTED' : 'ON THE WAY'}
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <button className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-600 hover:bg-green-100 transition-colors border border-green-100">
-                                        📞
-                                    </button>
+                                <div>
+                                    {riderDetails?.phone && (
+                                        <a
+                                            href={`tel:${riderDetails.phone}`}
+                                            className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-lg"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                        </a>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <button className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                                    <span>🛡️</span> Safety
-                                </button>
-                                <button className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2">
-                                    <span>📤</span> Share Trip
-                                </button>
+                            <hr className="border-gray-100 mb-4" />
+
+                            <div className="flex justify-between items-center column">
+                                <p className="text-center text-gray-500 text-sm w-full">
+                                    {riderLocation ? "Live location sharing active" : "Connecting to rider GPS..."}
+                                    <br />
+                                    <span className="text-[10px] text-gray-300">
+                                        Received: {lastLocationReceived ? new Date(lastLocationReceived).toLocaleTimeString() : 'Waiting...'}
+                                    </span>
+                                </p>
                             </div>
+
+
                         </div>
                     </div>
                 ) : status === 'COMPLETED' ? (
@@ -446,7 +503,7 @@ const FindingRider = ({ isOpen, rideId, sourceCoords, destinationCoords, sourceN
                     </>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

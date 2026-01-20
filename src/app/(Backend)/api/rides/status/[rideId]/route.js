@@ -13,7 +13,14 @@ export async function GET(request, { params }) {
         const conn = await connectToDatabase();
 
         const [rows] = await conn.execute(
-            "SELECT status, rider_id, price, expires_at, created_at, (NOW() > expires_at) as is_expired_now FROM rides WHERE id = ?",
+            `SELECT 
+                r.status, r.rider_id, r.price, r.expires_at, r.created_at, 
+                (NOW() > r.expires_at) as is_expired_now,
+                rd.FirstName, rd.LastName, rd.vehicleType, rd.phoneNumber,
+                rd.current_lat, rd.current_lng
+             FROM rides r
+             LEFT JOIN riders rd ON r.rider_id = rd.id
+             WHERE r.id = ?`,
             [rideId]
         );
 
