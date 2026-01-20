@@ -8,7 +8,7 @@ import { CiSearch } from "react-icons/ci";
 import { FaChevronDown } from "react-icons/fa";
 import { RxStopwatch } from "react-icons/rx";
 
-import { GoHome } from "react-icons/go";
+import { GoHome } from "react-icons/go"; //icon
 import { RiHomeOfficeLine } from "react-icons/ri";
 import { LuMapPin } from "react-icons/lu";
 import Vehicles from "@/app/(Frontend)/components/Vehicle";
